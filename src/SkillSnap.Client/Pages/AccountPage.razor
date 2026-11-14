@@ -1,0 +1,135 @@
+@page "/account"
+@using SkillSnap.Contracts
+@using SkillSnap.Client.Services
+@inject AccountSession Account
+
+<PageTitle>Account | SkillSnap</PageTitle>
+<section class="account-panel">
+    <p class="eyebrow">Your learning, anywhere</p>
+    <h1>@(Account.IsSignedIn ? "Your account" : createAccount ? "Create an account" : "Welcome back")</h1>
+    @if (busy)
+    {
+        <p role="status">Please wait…</p>
+    }
+    @if (error is not null)
+    {
+        <p class="booking-notice error" role="alert">@error</p>
+    }
+    @if (notice is not null)
+    {
+        <p class="booking-notice" role="status">@notice</p>
+    }
+    @if (Account.IsSignedIn)
+    {
+        <p>Signed in as <strong>@Account.Current!.Email</strong></p>
+        <p>Your registrations follow this account across browsers and devices.</p>
+        <p><a href="/">Explore sessions and manage your bookings</a></p>
+        @if (legacyCount > 0)
+        {
+            <div class="state">
+                <h2>Bring your browser bookings along</h2>
+                <p>Found @legacyCount booking(s) from the earlier demo in this browser. Import them into <strong>@Account.Current.Email</strong> only if they belong to you.</p>
+                <button disabled="@busy" @onclick="ImportAsync">Import browser bookings</button>
+            </div>
+        }
+        <button class="refresh" disabled="@busy" @onclick="SignOutAsync">Sign out</button>
+    }
+    else
+    {
+        <p>Sign in to keep your session registrations together.</p>
+        <div class="filters">
+            <button class="refresh" disabled="@busy" aria-pressed="@((!createAccount).ToString().ToLowerInvariant())" @onclick="() => SwitchMode(false)">Sign in</button>
+            <button class="refresh" disabled="@busy" aria-pressed="@(createAccount.ToString().ToLowerInvariant())" @onclick="() => SwitchMode(true)">Create account</button>
+        </div>
+        <EditForm Model="credentials" OnValidSubmit="SubmitAsync" FormName="account">
+            <DataAnnotationsValidator />
+            <ValidationSummary />
+            <label for="account-email">Email</label>
+            <InputText id="account-email" @bind-Value="credentials.Email" type="email" autocomplete="username" maxlength="254" disabled="@busy" />
+            <label for="account-password">Password</label>
+            <InputText id="account-password" @bind-Value="credentials.Password" type="password" autocomplete="@(createAccount ? "new-password" : "current-password")" maxlength="128" disabled="@busy" />
+            @if (createAccount)
+            {
+                <p class="demo-note">Use 10–128 characters with uppercase, lowercase, a number, and a symbol.</p>
+                <label for="confirm-password">Confirm password</label>
+                <input id="confirm-password" @bind="confirmation" type="password" autocomplete="new-password" maxlength="128" disabled="@busy" />
+            }
+            <button type="submit" disabled="@busy">@(createAccount ? "Create account and sign in" : "Sign in to SkillSnap")</button>
+        </EditForm>
+        <p class="demo-note">Local portfolio demo. Email verification and password recovery are not available yet.</p>
+    }
+</section>
+
+@code {
+    private AccountCredentials credentials = new();
+    private string confirmation = "";
+    private bool createAccount;
+    private bool busy = true;
+    private string? error;
+    private string? notice;
+    private int legacyCount;
+
+    protected override async Task OnInitializedAsync()
+    {
+        try { await Account.RefreshAsync(); await LoadLegacyAsync(); }
+        catch (HttpRequestException) { error = "Couldn’t reach the API. Check that it is running, then reload this page."; }
+        catch (TaskCanceledException) { error = "The request timed out. Reload this page to try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task LoadLegacyAsync()
+    {
+        legacyCount = 0;
+        if (!Account.IsSignedIn) return;
+        try { legacyCount = await Account.LegacyCountAsync(); }
+        catch (JSException) { notice = "Browser storage is unavailable, so old browser bookings cannot be imported here."; }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException)
+        { notice = "You’re signed in, but earlier browser bookings could not be checked. Reload this page to try again."; }
+    }
+
+    private void SwitchMode(bool create)
+    {
+        createAccount = create;
+        credentials = new();
+        confirmation = "";
+        error = notice = null;
+    }
+
+    private async Task SubmitAsync()
+    {
+        if (busy) return;
+        error = notice = null;
+        if (createAccount && credentials.Password != confirmation) { error = "The passwords do not match."; return; }
+        busy = true;
+        try
+        {
+            await Account.SignInAsync(credentials, createAccount);
+            credentials = new();
+            confirmation = "";
+            notice = "You’re signed in.";
+            await LoadLegacyAsync();
+        }
+        catch (HttpRequestException ex) { error = ex.StatusCode is null ? "Couldn’t confirm sign-in. Reload the page before trying again." : ex.Message; }
+        catch (TaskCanceledException) { error = "The request timed out. Reload the page to check whether you’re signed in."; }
+        finally { credentials.Password = ""; confirmation = ""; busy = false; }
+    }
+
+    private async Task SignOutAsync()
+    {
+        busy = true;
+        error = notice = null;
+        try { await Account.SignOutAsync(); legacyCount = 0; notice = "You’re signed out."; }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { error = "Couldn’t confirm sign-out. Check the API and try again."; }
+        finally { busy = false; }
+    }
+
+    private async Task ImportAsync()
+    {
+        busy = true;
+        error = notice = null;
+        try { await Account.ImportAsync(); await LoadLegacyAsync(); notice = "Browser bookings imported. You can now manage them from your account."; }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or JSException or InvalidOperationException)
+        { error = "Couldn’t confirm the import. Reload the page before retrying; existing bookings are preserved."; }
+        finally { busy = false; }
+    }
+}

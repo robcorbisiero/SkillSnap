@@ -33,3 +33,16 @@ Verified on November 14, 2026 with the same SDK.
 - API tests cover cancellation isolation, invalid keys, full/started/missing sessions, idempotent retries, key hashing, persistence across API restarts, and POST/DELETE browser preflight.
 
 Manual browser tests used a temporary demo registration and cancelled it afterward. No user registration was removed. The anonymous browser model and its limitations are documented in the README. Automated browser tests and mobile-specific verification remain future work.
+
+## Milestone 3 — Accounts
+
+Verified on November 14, 2026 with .NET SDK 10.0.404.
+
+- Solution build passed with zero warnings/errors; WebAssembly release publish passed.
+- All 32 integration cases passed. These include real Identity signup/login cookies, password hashing, validation, duplicate signup, logout, lockout, account rate limits, CSRF and identity-bound token renewal, account isolation, same-account access from a separate HTTP client, legacy imports/merges, and migration from earlier schemas. Existing capacity/concurrency tests now use authenticated accounts.
+- The user created and signed in to a local account through the browser; no password was entered by the agent.
+- The browser displayed the signed-in account, permitted registration, retained login and booking state after reload, filtered to My sessions, and allowed cancellation.
+- Only the temporary browser test booking was cancelled. The user remained signed in and the public session list was restored.
+- Old anonymous rows survive the migration. Integration tests proved that possession of the original key plus explicit authenticated import is required; matching email alone cannot claim bookings.
+
+Cookie logout and access from a second browser-equivalent HTTP client were tested in the integration suite. A second physical browser/device, automated browser tests, mobile layout, public hosting, and mail verification/recovery have not been verified or implemented in this milestone. See `accounts.md` for local-development limits.

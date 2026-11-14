@@ -1,0 +1,14 @@
+@using SkillSnap.Client.Services
+@implements IDisposable
+@inject AccountSession Account
+
+<nav aria-label="Main navigation" class="account-nav">
+    <a href="/">Sessions</a>
+    <a href="/account">@(Account.IsSignedIn ? "Account" : "Sign in / Create account")</a>
+</nav>
+
+@code {
+    protected override void OnInitialized() => Account.Changed += Update;
+    private void Update() => _ = InvokeAsync(StateHasChanged);
+    public void Dispose() => Account.Changed -= Update;
+}

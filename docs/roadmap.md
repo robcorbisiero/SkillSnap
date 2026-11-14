@@ -17,8 +17,18 @@ Deliver a complete local demo booking flow:
 
 Acceptance: register -> seat count falls -> My sessions includes it -> refresh preserves registration -> cancel -> count recovers and My sessions clears. A full or started session cannot be booked. Another browser cannot cancel this browser's registration.
 
-## Milestone 3 — User accounts
-Introduce ASP.NET Core Identity, verified server-side user identity, and organizer permissions. Design a deliberate transition from anonymous demo registrations to accounts; do not automatically claim a registration by email. Add authentication and authorization tests before exposing personal data.
+## Milestone 3 — User accounts (complete)
+
+- ASP.NET Core Identity accounts, password hashing, signup, login, and logout.
+- HttpOnly/SameSite login cookies, CSRF protection, account lockout, and login/signup rate limits.
+- Account-owned registrations available across browsers. Server-side authorization protects every booking mutation.
+- Explicit possession-based import of earlier browser bookings; preserved data and no claims by email.
+- Account isolation, cookie/CSRF, validation, lockout, rate-limit, cross-client, migration/import, and booking tests.
+- Local account UI and documentation. Email ownership verification and recovery are deferred until real mail delivery is configured.
+
+## Milestone 4 — Organizer tools (next)
+
+Add server-enforced organizer permissions, validated session creation/editing, and access tests. Provide a deliberate local organizer provisioning process; never let signup choose its own role. Prevent reducing capacity below existing bookings and clarify edits/cancellation behavior.
 
 ## Later milestones
 Validated organizer session creation/editing, attendance management, pagination, deployment over HTTPS, and operational monitoring. Each milestone gets its own reviewable change, tests, and updated documentation. This remains a new independent portfolio project, not the code submitted to Coursera.

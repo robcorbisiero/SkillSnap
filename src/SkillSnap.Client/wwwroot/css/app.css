@@ -222,3 +222,13 @@ footer {
 .registered { color: #166653; font-size: 14px; font-weight: 700; margin-bottom: 0; }
 .booking-notice { padding: 14px 18px; background: #e9f3ec; border: 1px solid #76ac91; border-radius: 8px; }
 .booking-notice.error { background: #fff1ee; border-color: #af5b4c; }
+
+.account-nav { display: flex; gap: 20px; font-size: 13px; }
+.account-panel { max-width: 580px; margin: 55px auto; }
+.account-panel h1 { font-size: 40px; }
+.account-panel label { display: block; margin: 18px 0 6px; font-weight: 650; font-size: 14px; }
+.account-panel input { width: 100%; padding: 12px; border: 1px solid #9bacaa; border-radius: 7px; font: inherit; background: white; color: #1a2934; }
+.account-panel form > button { margin-top: 22px; }
+.validation-errors { color: #9a3027; }
+.signin-booking { display: block; margin-top: 20px; font-weight: 650; color: #166653; }
+@media(max-width:620px) { .site-header { height: auto; min-height: 90px; gap: 16px; flex-wrap: wrap; padding-top: 15px; padding-bottom: 15px; } .account-nav { gap: 12px; } }

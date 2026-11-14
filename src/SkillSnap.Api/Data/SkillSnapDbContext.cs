@@ -1,17 +1,24 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 
 namespace SkillSnap.Api.Data;
 
-public sealed class SkillSnapDbContext(DbContextOptions<SkillSnapDbContext> options) : DbContext(options)
+public sealed class SkillSnapDbContext(DbContextOptions<SkillSnapDbContext> options) : IdentityDbContext<IdentityUser>(options)
 {
     public DbSet<LearningSession> LearningSessions => Set<LearningSession>();
     public DbSet<Registration> Registrations => Set<Registration>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        base.OnModelCreating(modelBuilder);
         var registration = modelBuilder.Entity<Registration>();
-        registration.Property(r => r.ParticipantHash).HasMaxLength(64).IsRequired();
+        registration.Property(r => r.ParticipantHash).HasMaxLength(64);
         registration.HasIndex(r => new { r.LearningSessionId, r.ParticipantHash }).IsUnique();
+        registration.HasIndex(r => new { r.LearningSessionId, r.UserId }).IsUnique();
+        registration.HasOne<IdentityUser>().WithMany().HasForeignKey(r => r.UserId).OnDelete(DeleteBehavior.Cascade);
+        registration.ToTable(t => t.HasCheckConstraint("CK_Registration_Owner",
+            "(\"UserId\" IS NOT NULL AND \"ParticipantHash\" IS NULL) OR (\"UserId\" IS NULL AND \"ParticipantHash\" IS NOT NULL)"));
         registration.HasOne<LearningSession>().WithMany()
             .HasForeignKey(r => r.LearningSessionId).OnDelete(DeleteBehavior.Cascade);
         var session = modelBuilder.Entity<LearningSession>();

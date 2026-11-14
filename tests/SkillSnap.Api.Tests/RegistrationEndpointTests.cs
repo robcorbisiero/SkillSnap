@@ -76,13 +76,13 @@ public sealed class RegistrationEndpointTests
     [InlineData(null)]
     [InlineData("invalid")]
     [InlineData("00000000-0000-0000-0000-000000000000")]
-    public async Task Mutations_reject_missing_or_invalid_participant_key(string? key)
+    public async Task Anonymous_mutations_are_rejected_regardless_of_legacy_key(string? key)
     {
         using var factory = new SessionFactory();
         using var client = factory.CreateClient();
         if (key is not null) client.DefaultRequestHeaders.Add("X-Participant-Key", key);
-        Assert.Equal(HttpStatusCode.BadRequest, (await client.PostAsync(Route, null)).StatusCode);
-        Assert.Equal(HttpStatusCode.BadRequest, (await client.DeleteAsync(Route)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.PostAsync(Route, null)).StatusCode);
+        Assert.Equal(HttpStatusCode.Unauthorized, (await client.DeleteAsync(Route)).StatusCode);
     }
 
     [Fact]
@@ -145,7 +145,7 @@ public sealed class RegistrationEndpointTests
     }
 
     [Fact]
-    public async Task Registration_survives_restart_and_stores_hash_instead_of_browser_key()
+    public async Task Registration_survives_restart_and_belongs_to_account()
     {
         var path = Path.Combine(Path.GetTempPath(), $"skillsnap-{Guid.NewGuid():N}.db");
         var key = Guid.NewGuid().ToString("N");
@@ -158,8 +158,8 @@ public sealed class RegistrationEndpointTests
                 await client.PostAsync(Route, null);
                 using var scope = first.Services.CreateScope();
                 var row = await scope.ServiceProvider.GetRequiredService<SkillSnapDbContext>().Registrations.SingleAsync();
-                Assert.Equal(64, row.ParticipantHash.Length);
-                Assert.DoesNotContain(key, row.ParticipantHash, StringComparison.OrdinalIgnoreCase);
+                Assert.Null(row.ParticipantHash);
+                Assert.False(string.IsNullOrWhiteSpace(row.UserId));
             }
             using var second = new SessionFactory(path);
             using var restored = Participant(second, key);
@@ -179,18 +179,17 @@ public sealed class RegistrationEndpointTests
         using var request = new HttpRequestMessage(HttpMethod.Options, Route);
         request.Headers.Add("Origin", "http://localhost:5180");
         request.Headers.Add("Access-Control-Request-Method", method);
-        request.Headers.Add("Access-Control-Request-Headers", "x-participant-key");
+        request.Headers.Add("Access-Control-Request-Headers", "x-csrf-token");
         using var response = await client.SendAsync(request);
         Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
         Assert.Contains(method, response.Headers.GetValues("Access-Control-Allow-Methods").Single());
-        Assert.Contains("x-participant-key", response.Headers.GetValues("Access-Control-Allow-Headers").Single());
+        Assert.Contains("x-csrf-token", response.Headers.GetValues("Access-Control-Allow-Headers").Single());
+        Assert.Equal("true", response.Headers.GetValues("Access-Control-Allow-Credentials").Single());
     }
 
     private static HttpClient Participant(SessionFactory factory, string? key = null)
     {
-        var client = factory.CreateClient();
-        client.DefaultRequestHeaders.Add("X-Participant-Key", key ?? Guid.NewGuid().ToString("N"));
-        return client;
+        return TestAccounts.CreateAsync(factory, key is null ? null : $"{key}@example.test").GetAwaiter().GetResult();
     }
 
     private static async Task<LearningSessionDto> First(HttpClient client) =>

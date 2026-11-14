@@ -2,6 +2,7 @@
 @using SkillSnap.Contracts
 @using SkillSnap.Client.Services
 @inject LearningSessionService Sessions
+@inject AccountSession Account
 
 <PageTitle>Learning sessions | SkillSnap</PageTitle>
 <section class="intro">
@@ -14,10 +15,14 @@
         <div><p class="eyebrow">Explore the programme</p><h2 id="sessions-heading">Learning sessions</h2></div>
         <button class="refresh" @onclick="LoadAsync" disabled="@(loading || pendingSession is not null)">Refresh sessions</button>
     </div>
-    <p class="demo-note">Demo programme · Fictional instructors and sample dates · Registrations are remembered in this browser</p>
+    <p class="demo-note">Demo programme · Fictional instructors and sample dates · Sign in to manage your registrations across devices</p>
+    @if (!Account.IsSignedIn)
+    {
+        <p class="booking-notice"><a href="/account">Sign in or create an account</a> to register. Existing browser bookings can be imported from your account page.</p>
+    }
     <div class="filters" aria-label="Session filters">
         <button class="refresh" aria-pressed="@((!mySessionsOnly).ToString().ToLowerInvariant())" @onclick="() => mySessionsOnly = false">All sessions</button>
-        <button class="refresh" aria-pressed="@(mySessionsOnly.ToString().ToLowerInvariant())" @onclick="() => mySessionsOnly = true">My sessions (@sessions.Count(s => s.IsRegistered))</button>
+        <button class="refresh" disabled="@(!Account.IsSignedIn)" aria-pressed="@(mySessionsOnly.ToString().ToLowerInvariant())" @onclick="() => mySessionsOnly = true">My sessions (@sessions.Count(s => s.IsRegistered))</button>
     </div>
     @if (notice is not null)
     {
@@ -56,7 +61,11 @@
                     <div><dt>Duration</dt><dd>@session.DurationMinutes minutes</dd></div>
                     <div><dt>Availability</dt><dd>@session.SeatsRemaining of @session.Capacity seats available</dd></div>
                 </dl>
-                @if (session.IsRegistered)
+                @if (!Account.IsSignedIn)
+                {
+                    <a class="signin-booking" href="/account">Sign in to register</a>
+                }
+                else if (session.IsRegistered)
                 {
                     <p class="registered">✓ You’re registered</p>
                     <button class="refresh booking-button" disabled="@(pendingSession is not null)"
@@ -95,12 +104,16 @@
         error = null;
         notice = null;
         actionError = null;
-        try { sessions = await Sessions.GetSessionsAsync(); }
+        try
+        {
+            await Account.RefreshAsync();
+            if (!Account.IsSignedIn) mySessionsOnly = false;
+            sessions = await Sessions.GetSessionsAsync();
+        }
         catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException)
         {
             error = "Check that the SkillSnap API is running, then try again.";
         }
-        catch (JSException) { error = "Enable browser storage so SkillSnap can remember your registrations, then try again."; }
         finally { loading = false; }
     }
 
