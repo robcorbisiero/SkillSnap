@@ -2,7 +2,7 @@
 
 A learning-session planner built with C#, Blazor WebAssembly, ASP.NET Core Web API, and SQLite through Entity Framework Core.
 
-**Milestone 4: organizer tools.** Organizers can create sessions and edit the programme, with validation, booking protection, and conflicting-edit checks. Attendees can create accounts, sign in, register, cancel, and filter to My sessions. Public browsing remains available. Sample dates and instructors are fictional. All session times are entered and displayed in UTC.
+**Milestone 5: attendance.** Organizers can create/edit sessions, view registered attendees, and record or correct attendance. Attendees see their own attendance in My sessions. Booking, account, capacity, and editing protections remain in place. Public browsing does not expose attendee details. Sample dates and instructors are fictional. All times are UTC.
 
 ASP.NET Core Identity stores accounts and password hashes in SQLite. Login uses an HttpOnly cookie, not browser-stored bearer tokens. Existing milestone 2 browser registrations remain in the database until their original browser key is explicitly imported into an account. See [accounts and the migration flow](docs/accounts.md) and the [development plan](docs/roadmap.md).
 
@@ -64,7 +64,17 @@ This Development-only command grants the `Organizer` role and exits without star
 
 Restart the API normally, refresh the app, and open Organizer from the navigation or Account page. Create a session with all required fields and a future UTC start. It immediately appears in the public Sessions list. Choose Edit session in the programme list to change its details. Save changes increments its revision. Reload selected session explicitly replaces unsaved form values with the latest saved version.
 
-Booked sessions keep their start time and duration; capacity cannot drop below current bookings (including legacy bookings). Started sessions are read-only. Concurrent edits using an older revision return a conflict instead of overwriting newer work. There is no session-deletion or organizer booking-cancellation endpoint. See [organizer details](docs/organizers.md).
+Booked sessions keep their start time and duration; capacity cannot drop below current bookings (including legacy bookings). Started sessions are read-only for session details, but their attendance can still be managed. Concurrent edits using an older revision return a conflict instead of overwriting newer work. There is no session-deletion or organizer booking-cancellation endpoint. See [organizer details](docs/organizers.md).
+
+## Attendance walkthrough
+
+1. Register for a session from Sessions using an attendee account (an organizer can also register).
+2. From Organizer, choose Manage attendance for that session. Only organizers can open its roster, which contains account email identifiers and booking statuses.
+3. Choose Mark attended or Mark absent. The saved status and last-updated UTC time appear in the roster. Corrections are allowed; Clear attendance returns the booking to Not recorded.
+4. Open My sessions as the registered account to see its own attendance. Public visitors and other accounts cannot see that status or attendee identities.
+5. A booking with recorded attendance cannot be cancelled until an organizer clears it. After clearing, normal attendee cancellation works and removes the booking from the roster.
+
+Attendance is recorded explicitly, never inferred from a booking or automatically marked absent. Organizers can enter/correct it at any time, including before a session for local testing. Unclaimed browser bookings are listed without an identity and cannot be marked until imported into an account. See [attendance behavior and API](docs/attendance.md).
 
 You can also inspect the API directly:
 
@@ -96,7 +106,7 @@ Blazor renders session cards
 - `src/SkillSnap.Contracts`: a small shared DTO library defines the response shape without exposing database entities or EF Core to the UI.
 - `tests/SkillSnap.Api.Tests`: xUnit tests run the real API against isolated SQLite files, including migrations, Identity cookies, and CSRF tokens. They cover accounts, validation, account isolation, logout, lockout, rate limits, imports, concurrent bookings, CORS, and persistence.
 
-The API allows credentialed browser requests only from configured frontend origins. CORS is a browser policy, not authentication. HttpOnly/SameSite cookies and per-request antiforgery validation protect mutations. Attendance, email verification/recovery, and deployment remain future work. This is a local development foundation.
+The API allows credentialed browser requests only from configured frontend origins. CORS is a browser policy, not authentication. HttpOnly/SameSite cookies and per-request antiforgery validation protect mutations. Organizer-only rosters are separate from public listing. Email verification/recovery and deployment remain future work. This is a local development foundation.
 
 ## API contract
 
@@ -115,17 +125,18 @@ The API allows credentialed browser requests only from configured frontend origi
     "capacity": 20,
     "registeredCount": 0,
     "isRegistered": false,
-    "seatsRemaining": 20
+    "seatsRemaining": 20,
+    "attendanceStatus": null
   }
 ]
 ```
 
-The response includes all sessions, including past dates. `capacity` is group size; `registeredCount` and `seatsRemaining` reflect saved bookings, including unclaimed legacy bookings. Without login, `isRegistered` is false. The API never returns participant keys, hashes, account IDs, or attendee lists.
+The response includes all sessions, including past dates. `capacity` is group size; `registeredCount` and `seatsRemaining` reflect saved bookings, including unclaimed legacy bookings. Without login, `isRegistered` is false. `attendanceStatus` is null unless this account owns a registration, when it is NotRecorded, Attended, or Absent. This listing never returns participant keys, hashes, account IDs, emails, or attendee lists.
 
 | Method and route | Behavior |
 | --- | --- |
 | `POST /api/learning-sessions/{id}/registration` | Register the signed-in account. Returns 204; repeated requests are idempotent. New bookings return 409 for full or started sessions. |
-| `DELETE /api/learning-sessions/{id}/registration` | Cancel only the signed-in account's booking. Returns 204, including when already cancelled. Cancellation is allowed after the start time. |
+| `DELETE /api/learning-sessions/{id}/registration` | Cancel only this account's unmarked booking. Returns 204, including when already cancelled. Recorded attendance returns 409 until cleared by an organizer. Cancellation of an unmarked booking is allowed after the start time. |
 
 Both mutations require a valid login cookie and a matching `X-CSRF-TOKEN` from `GET /api/auth/csrf`. Missing login returns 401; invalid/missing CSRF returns 400; missing sessions return 404. The old `X-Participant-Key` is no longer accepted as authentication for booking mutations or listing status. It is used only by the explicit legacy-import endpoints.
 
@@ -166,7 +177,7 @@ Fetch a new CSRF token whenever login identity changes. Bookings are available u
 
 ## Database migrations
 
-The initial, registration, Identity, and session-revision migrations and the model snapshot are committed. Normal startup applies migrations automatically. Earlier sessions, accounts, and anonymous bookings are preserved; existing sessions begin at revision 0. No manual EF command is needed to run it. Production migration execution should be a controlled deployment step.
+The initial, registration, Identity, session-revision, and attendance migrations and model snapshot are committed. Normal startup applies migrations automatically. Earlier sessions, accounts, roles, and bookings are preserved; existing registrations begin with NotRecorded attendance. No manual EF command is needed to run it. Production migration execution should be a controlled deployment step.
 
 To change the schema later, install the repository-local EF tool and add a migration:
 
@@ -187,4 +198,4 @@ dotnet publish src/SkillSnap.Client -c Release -o artifacts/client
 
 GitHub Actions restores, builds, runs integration tests, and publishes the WebAssembly client on pushes and pull requests. Browser interactions are checked manually; automated UI tests are a future addition.
 
-Next milestone: attendance management, followed by deployment. Email verification and password recovery need a real mail setup before public account use. See [the roadmap](docs/roadmap.md).
+Next: review deployment requirements and hosting. Email verification and password recovery need a real mail setup before public account use. See [the roadmap](docs/roadmap.md).

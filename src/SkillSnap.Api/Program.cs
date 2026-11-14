@@ -78,6 +78,7 @@ using (var scope = app.Services.CreateScope())
 app.MapSessionEndpoints();
 app.MapAccountEndpoints();
 app.MapOrganizerEndpoints();
+app.MapAttendanceEndpoints();
 app.Run();
 
 // Expose the entry point to the HTTP integration test host.

@@ -13,4 +13,5 @@ builder.Services.AddScoped<LearningSessionService>();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AccountSession>();
 builder.Services.AddScoped<OrganizerService>();
+builder.Services.AddScoped<AttendanceService>();
 await builder.Build().RunAsync();

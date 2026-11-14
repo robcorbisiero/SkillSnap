@@ -28,7 +28,7 @@ public sealed class SessionEndpointTests
         Assert.All(sessions, s => Assert.Equal(DateTimeKind.Utc, s.StartsAtUtc.Kind));
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SkillSnapDbContext>();
-        Assert.Equal(4, (await db.Database.GetAppliedMigrationsAsync()).Count());
+        Assert.Equal(5, (await db.Database.GetAppliedMigrationsAsync()).Count());
     }
 
     [Fact]

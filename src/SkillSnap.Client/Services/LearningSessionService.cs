@@ -21,7 +21,9 @@ public sealed class LearningSessionService(ApiClient api)
         var message = response.StatusCode switch
         {
             System.Net.HttpStatusCode.Unauthorized => "Your session has ended. Sign in again to manage registrations.",
-            System.Net.HttpStatusCode.Conflict => "This session is full or has already started. Refresh to see the latest availability.",
+            System.Net.HttpStatusCode.Conflict => register
+                ? "This session is full or has already started. Refresh to see the latest availability."
+                : "Attendance is recorded. Ask an organizer to clear it before cancelling.",
             System.Net.HttpStatusCode.NotFound => "This session is no longer available. Refresh the sessions.",
             _ => "We couldn’t update your registration. Please try again."
         };

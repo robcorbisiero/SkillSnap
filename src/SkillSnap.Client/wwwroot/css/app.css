@@ -245,3 +245,9 @@ footer {
 .organizer-row h3 { margin: 15px 0; }
 .organizer-row p { font-size: 13px; color: #58665f; }
 @media(max-width:850px) { .organizer-workspace { grid-template-columns: 1fr; } }
+
+.attendance-status { color: #205f45; font-size: 13px; }
+.attendance-row { padding: 24px; margin: 18px 0; background: white; border: 1px solid #dce5df; border-radius: 12px; }
+.attendance-row h3 { font-size: 18px; margin: 0 0 10px; overflow-wrap: anywhere; }
+.attendance-row p { font-size: 13px; }
+.attendance-actions { display: flex; gap: 10px; flex-wrap: wrap; margin-top: 16px; }

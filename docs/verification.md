@@ -61,3 +61,16 @@ Verified on November 14, 2026 with the same SDK.
 After organizer provisioning, the existing login immediately gained organizer access without signing in again. The browser rejected an empty creation form, then created a clearly labeled fictional practice session at capacity 20. Editing capacity to 24 saved successfully and advanced the revision to 1. The session appeared in the attendee listing and accepted a registration. With that booking present, the organizer editor disabled start-time and duration changes. Cancelling only the temporary test booking restored availability and unlocked the schedule. The new demo session was retained for local experimentation; the original three sessions were unchanged.
 
 The organizer page was left open with the demo session selected. Mobile layout and automated browser tests remain future work.
+
+## Milestone 5 — Attendance
+
+Verified on November 14, 2026 with the same SDK.
+
+- Solution build passed with zero warnings/errors; release WebAssembly publish passed.
+- All 64 integration cases passed. Attendance checks cover organizer-only rosters, attendee/public privacy, manual recording/correction/clearing, server-derived actor/time, valid statuses, CSRF, session mismatch, legacy import, cancellation protection, concurrent corrections, cancellation races, historical migration, and restart persistence.
+- The migration initializes existing registrations to NotRecorded/version 0 without removing earlier bookings, roles, accounts, or sessions. The local database was backed up before applying it; private data and backups remain ignored by Git.
+- Browser walkthrough used a temporary booking in the existing fictional organizer demo session. It showed Not recorded in the roster, saved Attended, corrected it to Absent and back to Attended, and displayed the saved status in My sessions.
+- The attendee view disabled cancellation and explained that attendance must first be cleared. Clearing through the organizer roster restored cancellation; cancelling only the temporary test booking removed it from the roster and restored the seat count.
+- The session itself and original programme were retained, the account stayed signed in, and the empty roster was left open for local use.
+
+No real attendee's booking or attendance was changed by this walkthrough. Automated browser tests, mobile-specific verification, an immutable attendance audit log, exports, and public deployment are outside this milestone.

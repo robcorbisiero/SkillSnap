@@ -299,6 +299,23 @@ namespace SkillSnap.Api.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
+                    b.Property<int>("AttendanceStatus")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
+                    b.Property<DateTime?>("AttendanceUpdatedAtUtc")
+                        .HasColumnType("TEXT");
+
+                    b.Property<string>("AttendanceUpdatedByUserId")
+                        .HasColumnType("TEXT");
+
+                    b.Property<int>("AttendanceVersion")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER")
+                        .HasDefaultValue(0);
+
                     b.Property<int>("LearningSessionId")
                         .HasColumnType("INTEGER");
 
@@ -321,6 +338,8 @@ namespace SkillSnap.Api.Data.Migrations
 
                     b.ToTable("Registrations", t =>
                         {
+                            t.HasCheckConstraint("CK_Registration_Attendance", "\"AttendanceStatus\" IN (0,1,2) AND \"AttendanceVersion\" >= 0");
+
                             t.HasCheckConstraint("CK_Registration_Owner", "(\"UserId\" IS NOT NULL AND \"ParticipantHash\" IS NULL) OR (\"UserId\" IS NULL AND \"ParticipantHash\" IS NOT NULL)");
                         });
                 });

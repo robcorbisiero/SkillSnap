@@ -1,6 +1,7 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
+using SkillSnap.Contracts;
 
 namespace SkillSnap.Api.Data;
 
@@ -13,6 +14,12 @@ public sealed class SkillSnapDbContext(DbContextOptions<SkillSnapDbContext> opti
     {
         base.OnModelCreating(modelBuilder);
         var registration = modelBuilder.Entity<Registration>();
+        registration.Property(r => r.AttendanceStatus).HasDefaultValue(AttendanceStatus.NotRecorded);
+        registration.Property(r => r.AttendanceVersion).HasDefaultValue(0).IsConcurrencyToken();
+        registration.Property(r => r.AttendanceUpdatedAtUtc).HasConversion(
+            value => value, value => value.HasValue ? DateTime.SpecifyKind(value.Value, DateTimeKind.Utc) : (DateTime?)null);
+        registration.ToTable(t => t.HasCheckConstraint("CK_Registration_Attendance",
+            "\"AttendanceStatus\" IN (0,1,2) AND \"AttendanceVersion\" >= 0"));
         registration.Property(r => r.ParticipantHash).HasMaxLength(64);
         registration.HasIndex(r => new { r.LearningSessionId, r.ParticipantHash }).IsUnique();
         registration.HasIndex(r => new { r.LearningSessionId, r.UserId }).IsUnique();

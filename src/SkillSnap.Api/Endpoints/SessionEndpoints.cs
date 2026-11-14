@@ -29,7 +29,9 @@ public static class SessionEndpoints
             .Select(s => new LearningSessionDto(s.Id, s.Title, s.Description, s.Topic,
                 s.Instructor, s.StartsAtUtc, s.DurationMinutes, s.Capacity,
                 db.Registrations.Count(r => r.LearningSessionId == s.Id),
-                userId != null && db.Registrations.Any(r => r.LearningSessionId == s.Id && r.UserId == userId)))
+                userId != null && db.Registrations.Any(r => r.LearningSessionId == s.Id && r.UserId == userId),
+                userId == null ? null : db.Registrations.Where(r => r.LearningSessionId == s.Id && r.UserId == userId)
+                    .Select(r => (AttendanceStatus?)r.AttendanceStatus).FirstOrDefault()))
             .ToListAsync(ct);
         return Results.Ok(sessions);
     }
@@ -60,7 +62,9 @@ public static class SessionEndpoints
     {
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
         if (!await db.LearningSessions.AnyAsync(s => s.Id == id, ct)) return Results.NotFound();
-        await db.Registrations.Where(r => r.LearningSessionId == id && r.UserId == userId).ExecuteDeleteAsync(ct);
+        await db.Registrations.Where(r => r.LearningSessionId == id && r.UserId == userId && r.AttendanceStatus == AttendanceStatus.NotRecorded).ExecuteDeleteAsync(ct);
+        if (await db.Registrations.AnyAsync(r => r.LearningSessionId == id && r.UserId == userId && r.AttendanceStatus != AttendanceStatus.NotRecorded, ct))
+            return Results.Problem(statusCode: 409, title: "Attendance is recorded. Ask an organizer to clear it before cancelling.");
         return Results.NoContent();
     }
 

@@ -68,10 +68,15 @@
                 else if (session.IsRegistered)
                 {
                     <p class="registered">✓ You’re registered</p>
-                    <button class="refresh booking-button" disabled="@(pendingSession is not null)"
+                    <p class="attendance-status">Attendance: @(session.AttendanceStatus is null or AttendanceStatus.NotRecorded ? "Not recorded" : session.AttendanceStatus.ToString())</p>
+                    <button class="refresh booking-button" disabled="@(pendingSession is not null || session.AttendanceStatus is AttendanceStatus.Attended or AttendanceStatus.Absent)"
                         aria-label="@($"Cancel registration for {session.Title}")" @onclick="() => UpdateRegistrationAsync(session, false)">
                         @(pendingSession == session.Id ? "Updating…" : "Cancel registration")
                     </button>
+                    @if (session.AttendanceStatus is AttendanceStatus.Attended or AttendanceStatus.Absent)
+                    {
+                        <p class="demo-note">Ask an organizer to clear attendance before cancelling.</p>
+                    }
                 }
                 else
                 {

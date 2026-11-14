@@ -75,6 +75,7 @@ else
                     <h3>@session.Title</h3>
                     <p>@session.StartsAtUtc.ToString("MMM d, yyyy · HH:mm") UTC · @session.DurationMinutes minutes</p>
                     <p>@session.RegisteredCount booked / @session.Capacity capacity · Revision @session.Version</p>
+                    <p><a href="@($"/organizer/sessions/{session.Id}/attendance")" aria-label="@($"Attendance for {session.Title}")">Manage attendance</a></p>
                     @if (session.StartsAtUtc <= DateTime.UtcNow)
                     {
                         <p class="demo-note">Started sessions are read-only.</p>

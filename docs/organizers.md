@@ -26,7 +26,7 @@ Create is not an idempotent operation. If the network fails before its response 
 - Once any booking exists, start time and duration cannot change. This includes unclaimed legacy browser bookings.
 - Title, description, topic, instructor, and valid capacity remain editable before the start time. Participants see updated details when they next load or refresh; notifications are not implemented.
 - Started sessions are read-only, even if an organizer tries to reschedule them into the future.
-- The editor does not delete sessions, remove participant registrations, or cancel a session. Participant cancellation remains account-owned.
+- The editor does not delete sessions, remove participant registrations, or cancel a session. Participant cancellation remains account-owned; marked attendance must first be cleared by an organizer.
 
 The API combines revision comparison, booking-count checks, schedule checks, and the update into one parameterized SQLite write. Registration itself also checks capacity in one write. SQLite serializes these writes, so a new booking cannot slip between checking capacity and saving a smaller capacity. The concurrency tests exercise both possible orders.
 
@@ -47,4 +47,4 @@ Missing login returns 401; an attendee account gets 403. Invalid form values or 
 
 The revision migration adds a non-null integer column initialized to zero. It does not rewrite titles, times, capacity, registrations, accounts, or roles. Apply updates through normal API startup, not database reset. Keep a backup of important local data before schema changes.
 
-Integration tests cover anonymous/attendee rejection, forged signup roles, grant/revoke behavior with the same login cookie, Development-only provisioning, create/edit visibility, validation, CSRF, protected bookings, past sessions, stale revisions, concurrent edits, and capacity/booking races. Email notifications, drafts, deletion/cancellation policies, attendee management, attendance, and public deployment remain future work.
+Integration tests cover anonymous/attendee rejection, forged signup roles, grant/revoke behavior with the same login cookie, Development-only provisioning, create/edit visibility, validation, CSRF, protected bookings, past sessions, stale revisions, concurrent edits, and capacity/booking races. Organizer attendance rosters and corrections are documented in attendance.md. Email notifications, drafts, session deletion/cancellation, and public deployment remain future work.

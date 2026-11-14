@@ -35,9 +35,17 @@ Acceptance: register -> seat count falls -> My sessions includes it -> refresh p
 - Authorization, provisioning, validation, concurrency, booking-protection, and migration tests.
 - No session deletion or participant booking cancellation through organizer tools.
 
-## Milestone 5 — Attendance (next)
+## Milestone 5 — Attendance (complete)
 
-Design organizer-managed attendance against existing account registrations, with access controls and tests. Keep attendance distinct from booking and avoid exposing private attendee details in public responses.
+- Organizer-only rosters and manual NotRecorded/Attended/Absent statuses, with corrections and clearing.
+- Attendees see only their own status; public responses never reveal roster identities.
+- Separate attendance revisions, server-derived last-change fields, CSRF protection, and concurrency/cancellation safeguards.
+- Existing bookings and roles preserved through migration; unclaimed browser bookings must be imported before marking.
+- Permission, privacy, validation, migration, persistence, and race-condition tests.
+
+## Next — Deployment readiness
+
+Choose the host and domain, configure persistent database/key storage and HTTPS, decide the mail provider for verification/recovery, and test the deployed flow before public use. No hosting purchases, paid subscriptions, domain registrations, or external mail setup are implied by completing the local milestones.
 
 ## Later milestones
 Pagination, deployment over HTTPS, account mail verification/recovery, and operational monitoring. Each milestone gets its own reviewable change, tests, and updated documentation. This remains a new independent portfolio project, not the code submitted to Coursera.

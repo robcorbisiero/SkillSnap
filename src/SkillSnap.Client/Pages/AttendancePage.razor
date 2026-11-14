@@ -1,0 +1,103 @@
+@page "/organizer/sessions/{SessionId:int}/attendance"
+@using SkillSnap.Contracts
+@using SkillSnap.Client.Services
+@inject AccountSession Account
+@inject AttendanceService Attendance
+
+<PageTitle>Attendance | SkillSnap</PageTitle>
+<section class="organizer-intro">
+    <p class="eyebrow">Keep track of learning</p>
+    <h1>Session attendance</h1>
+    <p><a href="/organizer">Back to organizer tools</a></p>
+</section>
+@if (error is not null) { <p class="booking-notice error" role="alert">@error</p> }
+@if (notice is not null) { <p class="booking-notice" role="status">@notice</p> }
+@if (loading)
+{
+    <p role="status">Loading attendance…</p>
+}
+else if (Account.Current?.IsOrganizer != true)
+{
+    <div class="state"><h2>Organizer access required</h2><p>Attendee details are available only to organizers.</p><a href="/account">Open your account</a></div>
+}
+else if (roster is not null)
+{
+    <div class="section-heading"><div><h2>@roster.Title</h2><p>@roster.StartsAtUtc.ToString("MMM d, yyyy · HH:mm") UTC</p></div><button class="refresh" disabled="@saving" @onclick="RefreshAsync">Refresh roster</button></div>
+    <p class="count">@roster.Entries.Count bookings · @roster.Entries.Count(r => r.Status == AttendanceStatus.Attended) attended · @roster.Entries.Count(r => r.Status == AttendanceStatus.Absent) absent · @roster.Entries.Count(r => r.Status == AttendanceStatus.NotRecorded) not recorded</p>
+    <p class="demo-note">Attendance is separate from booking. Corrections are allowed. Clear a recorded status before an attendee cancels.</p>
+    @if (roster.Entries.Count == 0)
+    {
+        <p class="state">No registered attendees yet.</p>
+    }
+    @foreach (var entry in roster.Entries)
+    {
+        <article class="attendance-row" @key="entry.RegistrationId">
+            <div><h3>@(entry.IsLegacy ? "Unclaimed browser booking" : entry.Email ?? "Account attendee")</h3><p>Registration #@entry.RegistrationId · <strong>@(entry.Status == AttendanceStatus.NotRecorded ? "Not recorded" : entry.Status.ToString())</strong></p>
+            @if (entry.UpdatedAtUtc is { } updated) { <p class="demo-note">Updated @updated.ToString("MMM d, yyyy · HH:mm") UTC</p> }</div>
+            @if (entry.IsLegacy)
+            {
+                <p class="demo-note">The attendee must import this booking into an account before attendance can be recorded.</p>
+            }
+            else
+            {
+                <div class="attendance-actions">
+                    <button disabled="@(saving || entry.Status == AttendanceStatus.Attended)" aria-label="@($"Mark registration {entry.RegistrationId} attended")" @onclick="() => SetAsync(entry, AttendanceStatus.Attended)">Mark attended</button>
+                    <button class="refresh" disabled="@(saving || entry.Status == AttendanceStatus.Absent)" aria-label="@($"Mark registration {entry.RegistrationId} absent")" @onclick="() => SetAsync(entry, AttendanceStatus.Absent)">Mark absent</button>
+                    <button class="refresh" disabled="@(saving || entry.Status == AttendanceStatus.NotRecorded)" aria-label="@($"Clear attendance for registration {entry.RegistrationId}")" @onclick="() => SetAsync(entry, AttendanceStatus.NotRecorded)">Clear attendance</button>
+                </div>
+            }
+        </article>
+    }
+}
+@if (!loading && !saving && (roster is null || Account.Current?.IsOrganizer != true))
+{
+    <button class="refresh" @onclick="RefreshAsync">Check again</button>
+}
+
+@code {
+    [Parameter] public int SessionId { get; set; }
+    private AttendanceRosterDto? roster;
+    private bool loading = true;
+    private bool saving;
+    private string? error;
+    private string? notice;
+
+    protected override Task OnParametersSetAsync() => RefreshAsync();
+    private async Task RefreshAsync()
+    {
+        if (saving) return;
+        loading = true;
+        roster = null;
+        error = notice = null;
+        try
+        {
+            await Account.RefreshAsync();
+            if (Account.Current?.IsOrganizer == true) roster = await Attendance.GetAsync(SessionId);
+        }
+        catch (HttpRequestException ex) { error = ex.StatusCode is null ? "Couldn’t load attendance. Check the API and try again." : ex.Message; }
+        catch (TaskCanceledException) { error = "Loading attendance timed out. Try again."; }
+        finally { loading = false; }
+    }
+
+    private async Task SetAsync(AttendanceEntryDto entry, AttendanceStatus status)
+    {
+        if (saving) return;
+        saving = true;
+        error = notice = null;
+        var saved = false;
+        try
+        {
+            await Attendance.SetAsync(SessionId, entry, status);
+            saved = true;
+            roster = await Attendance.GetAsync(SessionId);
+            notice = "Attendance saved.";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException)
+        {
+            error = saved ? "Attendance was saved, but the roster could not be refreshed. Refresh before another change."
+                : ex is HttpRequestException { StatusCode: not null } ? ex.Message
+                : "Couldn’t confirm the update. Refresh the roster before retrying.";
+        }
+        finally { saving = false; }
+    }
+}
