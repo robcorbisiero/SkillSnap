@@ -1,0 +1,71 @@
+@page "/"
+@using SkillSnap.Contracts
+@using SkillSnap.Client.Services
+@inject LearningSessionService Sessions
+
+<PageTitle>Learning sessions | SkillSnap</PageTitle>
+<section class="intro">
+    <p class="eyebrow">A little time. A new skill.</p>
+    <h1>Your next learning<br />moment starts here.</h1>
+    <p>Explore practical sessions in web development. Find a topic, meet an instructor, and make room to grow.</p>
+</section>
+<section aria-labelledby="sessions-heading">
+    <div class="section-heading">
+        <div><p class="eyebrow">Explore the programme</p><h2 id="sessions-heading">Learning sessions</h2></div>
+        <button class="refresh" @onclick="LoadAsync" disabled="@loading">Refresh sessions</button>
+    </div>
+    <p class="demo-note">Demo programme · Fictional instructors and sample dates · Browsing only in this milestone</p>
+    <div aria-live="polite" aria-busy="@loading.ToString().ToLowerInvariant()">
+    @if (loading)
+    {
+        <p class="state" role="status">Loading learning sessions…</p>
+    }
+    else if (error is not null)
+    {
+        <div class="state error" role="alert"><h3>We couldn’t load the sessions.</h3><p>@error</p><button @onclick="LoadAsync">Try again</button></div>
+    }
+    else if (sessions.Count == 0)
+    {
+        <p class="state">No sessions have been scheduled yet. Check back soon.</p>
+    }
+    else
+    {
+        <p class="count">@sessions.Count sessions to explore · Times shown in UTC</p>
+        <div class="session-grid">
+        @foreach (var session in sessions)
+        {
+            <article class="session-card" @key="session.Id">
+                <span class="topic">@session.Topic</span>
+                <h3>@session.Title</h3>
+                <p class="description">@session.Description</p>
+                <p class="instructor">With @session.Instructor</p>
+                <dl>
+                    <div><dt>When</dt><dd><time datetime="@session.StartsAtUtc.ToString("O")">@session.StartsAtUtc.ToString("MMM d, yyyy · HH:mm") UTC</time></dd></div>
+                    <div><dt>Duration</dt><dd>@session.DurationMinutes minutes</dd></div>
+                    <div><dt>Capacity</dt><dd>@session.Capacity participants</dd></div>
+                </dl>
+            </article>
+        }
+        </div>
+    }
+    </div>
+</section>
+
+@code {
+    private List<LearningSessionDto> sessions = [];
+    private bool loading = true;
+    private string? error;
+    protected override Task OnInitializedAsync() => LoadAsync();
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        error = null;
+        try { sessions = await Sessions.GetSessionsAsync(); }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            error = "Check that the SkillSnap API is running, then try again.";
+        }
+        finally { loading = false; }
+    }
+}

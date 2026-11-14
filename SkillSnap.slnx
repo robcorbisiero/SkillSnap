@@ -1,0 +1,10 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/SkillSnap.Api/SkillSnap.Api.csproj" />
+    <Project Path="src/SkillSnap.Client/SkillSnap.Client.csproj" />
+    <Project Path="src/SkillSnap.Contracts/SkillSnap.Contracts.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/SkillSnap.Api.Tests/SkillSnap.Api.Tests.csproj" />
+  </Folder>
+</Solution>
