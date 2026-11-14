@@ -19,7 +19,7 @@ public static class AccountEndpoints
         {
             ctx.Response.Headers.CacheControl = "no-store";
             var user = await users.GetUserAsync(ctx.User);
-            return user is null ? Results.Unauthorized() : Results.Ok(new AccountInfo(user.Email!));
+            return user is null ? Results.Unauthorized() : Results.Ok(new AccountInfo(user.Email!, await users.IsInRoleAsync(user, "Organizer")));
         }).RequireAuthorization();
         group.MapPost("/register", RegisterAsync).AddEndpointFilter<CsrfFilter>().RequireRateLimiting("accounts");
         group.MapPost("/login", LoginAsync).AddEndpointFilter<CsrfFilter>().RequireRateLimiting("accounts");

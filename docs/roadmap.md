@@ -26,9 +26,18 @@ Acceptance: register -> seat count falls -> My sessions includes it -> refresh p
 - Account isolation, cookie/CSRF, validation, lockout, rate-limit, cross-client, migration/import, and booking tests.
 - Local account UI and documentation. Email ownership verification and recovery are deferred until real mail delivery is configured.
 
-## Milestone 4 — Organizer tools (next)
+## Milestone 4 — Organizer tools (implemented)
 
-Add server-enforced organizer permissions, validated session creation/editing, and access tests. Provide a deliberate local organizer provisioning process; never let signup choose its own role. Prevent reducing capacity below existing bookings and clarify edits/cancellation behavior.
+- Server-enforced role policy, checked against current database membership.
+- Development-only local provisioning for existing accounts; no role selection on signup or HTTP role assignment.
+- Organizer form and API for creating and editing programme sessions, with UTC date/time and server validation.
+- Atomic capacity and booked-schedule protection, plus session revisions to reject conflicting edits.
+- Authorization, provisioning, validation, concurrency, booking-protection, and migration tests.
+- No session deletion or participant booking cancellation through organizer tools.
+
+## Milestone 5 — Attendance (next)
+
+Design organizer-managed attendance against existing account registrations, with access controls and tests. Keep attendance distinct from booking and avoid exposing private attendee details in public responses.
 
 ## Later milestones
-Validated organizer session creation/editing, attendance management, pagination, deployment over HTTPS, and operational monitoring. Each milestone gets its own reviewable change, tests, and updated documentation. This remains a new independent portfolio project, not the code submitted to Coursera.
+Pagination, deployment over HTTPS, account mail verification/recovery, and operational monitoring. Each milestone gets its own reviewable change, tests, and updated documentation. This remains a new independent portfolio project, not the code submitted to Coursera.

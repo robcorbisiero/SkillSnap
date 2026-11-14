@@ -6,6 +6,8 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.RateLimiting;
 using System.Threading.RateLimiting;
+using Microsoft.AspNetCore.Authorization;
+using SkillSnap.Api.Security;
 
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddProblemDetails();
@@ -33,7 +35,9 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Events.OnRedirectToLogin = ctx => { ctx.Response.StatusCode = 401; return Task.CompletedTask; };
     options.Events.OnRedirectToAccessDenied = ctx => { ctx.Response.StatusCode = 403; return Task.CompletedTask; };
 });
-builder.Services.AddAuthorization();
+builder.Services.AddAuthorization(options => options.AddPolicy("Organizer", policy =>
+    policy.RequireAuthenticatedUser().AddRequirements(new OrganizerRequirement())));
+builder.Services.AddScoped<IAuthorizationHandler, OrganizerHandler>();
 builder.Services.AddAntiforgery(options =>
 {
     options.HeaderName = "X-CSRF-TOKEN";
@@ -52,7 +56,7 @@ builder.Services.AddRateLimiter(options =>
 });
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy =>
     policy.WithOrigins(builder.Configuration.GetSection("AllowedOrigins").Get<string[]>()
-        ?? ["http://localhost:5180"]).WithMethods("GET", "POST", "DELETE").AllowAnyHeader().AllowCredentials()));
+        ?? ["http://localhost:5180"]).WithMethods("GET", "POST", "PUT", "DELETE").AllowAnyHeader().AllowCredentials()));
 var app = builder.Build();
 app.UseExceptionHandler();
 app.UseCors();
@@ -64,9 +68,16 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<SkillSnapDbContext>();
     await db.Database.MigrateAsync();
+    if (builder.Configuration["grant-organizer"] is { } email)
+    {
+        await OrganizerProvisioner.GrantAsync(scope.ServiceProvider, email);
+        app.Logger.LogInformation("Organizer access granted to the existing local account. Sign-in is unchanged.");
+        return;
+    }
 }
 app.MapSessionEndpoints();
 app.MapAccountEndpoints();
+app.MapOrganizerEndpoints();
 app.Run();
 
 // Expose the entry point to the HTTP integration test host.

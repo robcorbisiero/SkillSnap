@@ -42,4 +42,4 @@ Public session listing remains available and never returns user IDs or emails. I
 
 ## Scope
 
-This is a local portfolio implementation. Email is a login identifier; email ownership is not verified. Email confirmation, password recovery/change, MFA, account deletion, organizer roles/UI, and public deployment are future work. No mail is sent. Role tables are part of the standard Identity schema, but users cannot grant themselves organizer permissions and no organizer endpoints exist yet. Do not use this milestone as a public account service without completing those deployment requirements.
+This is a local portfolio implementation. Email is a login identifier; email ownership is not verified. Email confirmation, password recovery/change, MFA, account deletion, and public deployment are future work. No mail is sent. Organizer tools are available through separately provisioned role membership; signup cannot grant that access. See `organizers.md`. Do not use this milestone as a public account service without completing the deployment requirements.

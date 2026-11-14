@@ -244,6 +244,10 @@ namespace SkillSnap.Api.Data.Migrations
                         .HasMaxLength(80)
                         .HasColumnType("TEXT");
 
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("INTEGER");
+
                     b.HasKey("Id");
 
                     b.HasIndex("StartsAtUtc");
@@ -260,7 +264,8 @@ namespace SkillSnap.Api.Data.Migrations
                             Instructor = "Alex Morgan",
                             StartsAtUtc = new DateTime(2027, 1, 12, 18, 0, 0, 0, DateTimeKind.Utc),
                             Title = "Build your first Blazor component",
-                            Topic = "Blazor"
+                            Topic = "Blazor",
+                            Version = 0
                         },
                         new
                         {
@@ -271,7 +276,8 @@ namespace SkillSnap.Api.Data.Migrations
                             Instructor = "Sam Rivera",
                             StartsAtUtc = new DateTime(2027, 1, 14, 19, 0, 0, 0, DateTimeKind.Utc),
                             Title = "APIs that make sense",
-                            Topic = "ASP.NET Core"
+                            Topic = "ASP.NET Core",
+                            Version = 0
                         },
                         new
                         {
@@ -282,7 +288,8 @@ namespace SkillSnap.Api.Data.Migrations
                             Instructor = "Taylor Chen",
                             StartsAtUtc = new DateTime(2027, 1, 19, 18, 30, 0, 0, DateTimeKind.Utc),
                             Title = "From C# objects to SQLite",
-                            Topic = "Entity Framework Core"
+                            Topic = "Entity Framework Core",
+                            Version = 0
                         });
                 });
 

@@ -10,4 +10,5 @@ public sealed class LearningSession
     public DateTime StartsAtUtc { get; set; }
     public int DurationMinutes { get; set; }
     public int Capacity { get; set; }
+    public int Version { get; set; }
 }

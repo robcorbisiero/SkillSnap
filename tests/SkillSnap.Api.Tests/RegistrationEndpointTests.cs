@@ -23,9 +23,8 @@ public sealed class RegistrationEndpointTests
             await using (var old = new SkillSnapDbContext(options))
             {
                 await old.GetService<IMigrator>().MigrateAsync("20261114205304_InitialCreate");
-                var row = await old.LearningSessions.FindAsync(1);
-                row!.Title = "My existing session";
-                await old.SaveChangesAsync();
+                // Use the historical schema directly; the current entity also has newer columns.
+                await old.Database.ExecuteSqlRawAsync("UPDATE LearningSessions SET Title = 'My existing session' WHERE Id = 1");
             }
             using var upgraded = new SessionFactory(path);
             using var client = Participant(upgraded);

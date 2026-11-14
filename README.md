@@ -2,7 +2,7 @@
 
 A learning-session planner built with C#, Blazor WebAssembly, ASP.NET Core Web API, and SQLite through Entity Framework Core.
 
-**Milestone 3: user accounts.** Create an account, sign in, register for sessions, cancel, and filter to My sessions. Registrations follow the signed-in account across browsers and devices. Public browsing remains available. Sample dates and instructors are fictional. All session times are displayed in UTC.
+**Milestone 4: organizer tools.** Organizers can create sessions and edit the programme, with validation, booking protection, and conflicting-edit checks. Attendees can create accounts, sign in, register, cancel, and filter to My sessions. Public browsing remains available. Sample dates and instructors are fictional. All session times are entered and displayed in UTC.
 
 ASP.NET Core Identity stores accounts and password hashes in SQLite. Login uses an HttpOnly cookie, not browser-stored bearer tokens. Existing milestone 2 browser registrations remain in the database until their original browser key is explicitly imported into an account. See [accounts and the migration flow](docs/accounts.md) and the [development plan](docs/roadmap.md).
 
@@ -52,6 +52,20 @@ Open [http://localhost:5180](http://localhost:5180). Expect three session cards.
 
 If the account page finds earlier bookings in this browser, it offers Import browser bookings. Import only your own bookings; the transfer is explicit and does not happen merely because you supplied an email address. A fresh browser can sign in to the same account to see account-owned bookings. The local demo does not send verification or password-recovery email.
 
+## Organizer setup and walkthrough
+
+Signup creates an attendee account; it cannot select or grant a role. To grant an existing account organizer access in your own local Development database, stop the API, then run this command from the repository root, replacing the example email with the intended existing account:
+
+```powershell
+dotnet run --project src/SkillSnap.Api --launch-profile http -- --grant-organizer "you@example.test"
+```
+
+This Development-only command grants the `Organizer` role and exits without starting a listener. It does not create an account or change its password. Rerunning for the same account is safe. It intentionally changes access: organizers may create and edit **all programme sessions**, including seeded sessions. Do not grant it to ordinary attendees. There is no HTTP role-grant endpoint.
+
+Restart the API normally, refresh the app, and open Organizer from the navigation or Account page. Create a session with all required fields and a future UTC start. It immediately appears in the public Sessions list. Choose Edit session in the programme list to change its details. Save changes increments its revision. Reload selected session explicitly replaces unsaved form values with the latest saved version.
+
+Booked sessions keep their start time and duration; capacity cannot drop below current bookings (including legacy bookings). Started sessions are read-only. Concurrent edits using an older revision return a conflict instead of overwriting newer work. There is no session-deletion or organizer booking-cancellation endpoint. See [organizer details](docs/organizers.md).
+
 You can also inspect the API directly:
 
 ```powershell
@@ -78,10 +92,11 @@ Blazor renders session cards
 
 - `src/SkillSnap.Client`: the C# UI runs in the browser. Its service calls the API and deserializes JSON; the component displays the result. Database access never runs in the browser.
 - `src/SkillSnap.Api`: Identity authenticates the login cookie. Protected registration endpoints derive ownership from the authenticated user's ID, never a posted user ID or email. EF Core reads sessions and counts from SQLite. The booking insert checks capacity and start time in one parameterized SQLite statement; a unique account/session index prevents duplicate bookings.
+- Organizer routes additionally check current role membership in the Identity database for every request. A version-checked, atomic SQLite update protects edits against both other edits and concurrent bookings. The organizer flag returned to the UI is informational; hiding a link is not authorization.
 - `src/SkillSnap.Contracts`: a small shared DTO library defines the response shape without exposing database entities or EF Core to the UI.
 - `tests/SkillSnap.Api.Tests`: xUnit tests run the real API against isolated SQLite files, including migrations, Identity cookies, and CSRF tokens. They cover accounts, validation, account isolation, logout, lockout, rate limits, imports, concurrent bookings, CORS, and persistence.
 
-The API allows credentialed browser requests only from configured frontend origins. CORS is a browser policy, not authentication. HttpOnly/SameSite cookies and per-request antiforgery validation protect account and registration mutations. Organizer permissions, attendance, email verification/recovery, and deployment remain future work. This is a local development foundation.
+The API allows credentialed browser requests only from configured frontend origins. CORS is a browser policy, not authentication. HttpOnly/SameSite cookies and per-request antiforgery validation protect mutations. Attendance, email verification/recovery, and deployment remain future work. This is a local development foundation.
 
 ## API contract
 
@@ -145,12 +160,13 @@ Fetch a new CSRF token whenever login identity changes. Bookings are available u
 - Local HTTP avoids certificate setup. A hosted version needs HTTPS and a deployment-specific configuration.
 - Cookies require the same site: use `localhost` for both apps, and the same scheme. Use the supplied `http` launch profiles for local development; outside Development cookies are Secure and require HTTPS. A deployment should serve the UI and API on the same site.
 - Data Protection keys live in the ignored `src/SkillSnap.Api/App_Data/keys` folder so login cookies survive local API restarts. Keep that folder private and backed up with the database. It must never be committed or shared.
+- Organizer access is granted only through the local Development command above. Refresh Account or Organizer after provisioning. Role checks read the database directly, so a previously issued login cookie does not keep stale organizer privileges if the role is removed.
 - After repeated failed logins, wait 15 minutes for account lockout to expire. Account endpoints additionally allow 10 login/signup attempts per IP per five minutes.
 - Build errors about a missing SDK: install the .NET 10 **SDK**, reopen the terminal, and run `dotnet --list-sdks`.
 
 ## Database migrations
 
-The initial, registration, and Identity migrations and the model snapshot are committed. Normal startup applies migrations automatically. Earlier sessions and anonymous bookings are preserved. No manual EF command is needed to run it. Production migration execution should be a controlled deployment step.
+The initial, registration, Identity, and session-revision migrations and the model snapshot are committed. Normal startup applies migrations automatically. Earlier sessions, accounts, and anonymous bookings are preserved; existing sessions begin at revision 0. No manual EF command is needed to run it. Production migration execution should be a controlled deployment step.
 
 To change the schema later, install the repository-local EF tool and add a migration:
 
@@ -171,4 +187,4 @@ dotnet publish src/SkillSnap.Client -c Release -o artifacts/client
 
 GitHub Actions restores, builds, runs integration tests, and publishes the WebAssembly client on pushes and pull requests. Browser interactions are checked manually; automated UI tests are a future addition.
 
-Next milestone: organizer permissions and validated session creation/editing, followed by attendance and deployment. Email verification and password recovery need a real mail setup before public account use. See [the roadmap](docs/roadmap.md).
+Next milestone: attendance management, followed by deployment. Email verification and password recovery need a real mail setup before public account use. See [the roadmap](docs/roadmap.md).

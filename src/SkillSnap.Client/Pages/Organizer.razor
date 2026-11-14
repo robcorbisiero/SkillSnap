@@ -1,0 +1,169 @@
+@page "/organizer"
+@using SkillSnap.Contracts
+@using SkillSnap.Client.Services
+@inject AccountSession Account
+@inject OrganizerService Organizers
+
+<PageTitle>Organizer tools | SkillSnap</PageTitle>
+<section class="organizer-intro">
+    <p class="eyebrow">Make room for learning</p>
+    <h1>Organizer tools</h1>
+    <p>Create and edit the learning programme. Times are entered and displayed in UTC.</p>
+</section>
+@if (error is not null)
+{
+    <p class="booking-notice error" role="alert">@error</p>
+}
+@if (notice is not null)
+{
+    <p class="booking-notice" role="status">@notice</p>
+}
+@if (loading)
+{
+    <p role="status">Loading organizer access…</p>
+}
+else if (Account.Current?.IsOrganizer != true)
+{
+    <div class="state"><h2>Organizer access required</h2><p>These tools are available only to organizer accounts. Signup does not grant organizer permissions.</p><a href="/account">Open your account</a></div>
+    <button class="refresh" @onclick="LoadAsync">Check access again</button>
+}
+else
+{
+    <div class="organizer-workspace">
+        <section class="editor-panel" aria-labelledby="editor-heading">
+            <h2 id="editor-heading">@(editingId is null ? "Create a session" : $"Edit session #{editingId}")</h2>
+            <p class="demo-note">Booked sessions keep their start time and duration. Capacity must cover all current bookings.</p>
+            <EditForm Model="model" OnValidSubmit="SaveAsync" FormName="session-editor">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <label for="session-title">Title</label>
+                <InputText id="session-title" @bind-Value="model.Title" maxlength="160" disabled="@saving" />
+                <label for="session-description">Description</label>
+                <InputTextArea id="session-description" @bind-Value="model.Description" maxlength="2000" rows="4" disabled="@saving" />
+                <label for="session-topic">Topic</label>
+                <InputText id="session-topic" @bind-Value="model.Topic" maxlength="80" disabled="@saving" />
+                <label for="session-instructor">Instructor</label>
+                <InputText id="session-instructor" @bind-Value="model.Instructor" maxlength="120" disabled="@saving" />
+                <label for="session-start">Start date and time (UTC)</label>
+                <InputDate TValue="DateTime" id="session-start" Type="InputDateType.DateTimeLocal"
+                    Value="model.StartsAtUtc" ValueChanged="SetStartTime" ValueExpression="() => model.StartsAtUtc" disabled="@(saving || editingBookings > 0)" />
+                <label for="session-duration">Duration in minutes</label>
+                <InputNumber id="session-duration" @bind-Value="model.DurationMinutes" min="1" max="480" disabled="@(saving || editingBookings > 0)" />
+                <label for="session-capacity">Capacity</label>
+                <InputNumber id="session-capacity" @bind-Value="model.Capacity" min="1" max="1000" disabled="@saving" />
+                <div class="editor-actions">
+                    <button type="submit" disabled="@saving">@(saving ? "Saving…" : editingId is null ? "Create session" : "Save changes")</button>
+                    <button type="button" class="refresh" disabled="@saving" @onclick="NewSession">New session</button>
+                    @if (editingId is not null)
+                    {
+                        <button type="button" class="refresh" disabled="@saving" @onclick="ReloadSelectedAsync">Reload selected session</button>
+                    }
+                </div>
+            </EditForm>
+            <p class="demo-note">Reloading the selected session replaces unsaved form changes. Sessions are not deleted by this tool.</p>
+        </section>
+        <section aria-labelledby="programme-heading">
+            <div class="section-heading"><h2 id="programme-heading">The programme</h2><button class="refresh" disabled="@saving" @onclick="RefreshListAsync">Refresh list</button></div>
+            @if (sessions.Count == 0)
+            {
+                <p class="state">No sessions yet. Create the first one.</p>
+            }
+            @foreach (var session in sessions)
+            {
+                <article class="organizer-row" @key="session.Id">
+                    <span class="topic">@session.Topic</span>
+                    <h3>@session.Title</h3>
+                    <p>@session.StartsAtUtc.ToString("MMM d, yyyy · HH:mm") UTC · @session.DurationMinutes minutes</p>
+                    <p>@session.RegisteredCount booked / @session.Capacity capacity · Revision @session.Version</p>
+                    @if (session.StartsAtUtc <= DateTime.UtcNow)
+                    {
+                        <p class="demo-note">Started sessions are read-only.</p>
+                    }
+                    else
+                    {
+                        <button class="refresh" disabled="@saving" aria-label="@($"Edit {session.Title}")" @onclick="() => Edit(session)">Edit session</button>
+                    }
+                </article>
+            }
+        </section>
+    </div>
+}
+
+@code {
+    private List<OrganizerSessionDto> sessions = [];
+    private SessionUpdate model = NewModel();
+    private int? editingId;
+    private int editingBookings;
+    private bool loading = true;
+    private bool saving;
+    private string? error;
+    private string? notice;
+
+    protected override Task OnInitializedAsync() => LoadAsync();
+    private static SessionUpdate NewModel() => new() { StartsAtUtc = DateTime.UtcNow.Date.AddDays(7).AddHours(18) };
+    private void SetStartTime(DateTime value) => model.StartsAtUtc = DateTime.SpecifyKind(value, DateTimeKind.Utc);
+    private void NewSession() { editingId = null; editingBookings = 0; model = NewModel(); error = notice = null; }
+    private void Edit(OrganizerSessionDto session)
+    {
+        editingId = session.Id;
+        editingBookings = session.RegisteredCount;
+        model = new SessionUpdate { Title = session.Title, Description = session.Description, Topic = session.Topic,
+            Instructor = session.Instructor, StartsAtUtc = session.StartsAtUtc, DurationMinutes = session.DurationMinutes,
+            Capacity = session.Capacity, Version = session.Version };
+        error = notice = null;
+    }
+
+    private async Task LoadAsync()
+    {
+        loading = true;
+        error = null;
+        try
+        {
+            await Account.RefreshAsync();
+            if (Account.Current?.IsOrganizer == true) sessions = await Organizers.GetSessionsAsync();
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException) { error = "Couldn’t load organizer tools. Check the API, then check access again."; }
+        finally { loading = false; }
+    }
+
+    private async Task RefreshListAsync()
+    {
+        saving = true;
+        error = null;
+        try { sessions = await Organizers.GetSessionsAsync(); }
+        catch (HttpRequestException ex) { error = ex.StatusCode is null ? "Couldn’t refresh the list. Try again." : ex.Message; }
+        catch (TaskCanceledException) { error = "The request timed out. Try refreshing again."; }
+        finally { saving = false; }
+    }
+
+    private async Task ReloadSelectedAsync()
+    {
+        var id = editingId;
+        await RefreshListAsync();
+        if (error is null && sessions.SingleOrDefault(s => s.Id == id) is { } session) Edit(session);
+    }
+
+    private async Task SaveAsync()
+    {
+        if (saving) return;
+        saving = true;
+        error = notice = null;
+        var saved = false;
+        var creating = editingId is null;
+        try
+        {
+            var id = await Organizers.SaveAsync(editingId, model);
+            saved = true;
+            sessions = await Organizers.GetSessionsAsync();
+            Edit(sessions.Single(s => s.Id == id));
+            notice = creating ? "Session created. It is now visible in the public programme." : "Session updated. Existing registrations are preserved.";
+        }
+        catch (Exception ex) when (ex is HttpRequestException or TaskCanceledException or System.Text.Json.JsonException or InvalidOperationException)
+        {
+            error = saved ? "Your session was saved, but the list could not be refreshed. Refresh before making another change."
+                : ex is HttpRequestException { StatusCode: not null } ? ex.Message
+                : "Couldn’t confirm the save. Refresh the list before retrying, to avoid creating a duplicate session.";
+        }
+        finally { saving = false; }
+    }
+}

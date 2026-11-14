@@ -22,6 +22,7 @@ public sealed class SkillSnapDbContext(DbContextOptions<SkillSnapDbContext> opti
         registration.HasOne<LearningSession>().WithMany()
             .HasForeignKey(r => r.LearningSessionId).OnDelete(DeleteBehavior.Cascade);
         var session = modelBuilder.Entity<LearningSession>();
+        session.Property(s => s.Version).IsConcurrencyToken();
         session.Property(s => s.Title).HasMaxLength(160).IsRequired();
         session.Property(s => s.Description).HasMaxLength(2000).IsRequired();
         session.Property(s => s.Topic).HasMaxLength(80).IsRequired();

@@ -23,6 +23,10 @@
     {
         <p>Signed in as <strong>@Account.Current!.Email</strong></p>
         <p>Your registrations follow this account across browsers and devices.</p>
+        @if (Account.Current.IsOrganizer)
+        {
+            <p><a href="/organizer">Open organizer tools</a> to create and edit learning sessions.</p>
+        }
         <p><a href="/">Explore sessions and manage your bookings</a></p>
         @if (legacyCount > 0)
         {

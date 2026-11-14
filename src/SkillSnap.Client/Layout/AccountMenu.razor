@@ -4,6 +4,10 @@
 
 <nav aria-label="Main navigation" class="account-nav">
     <a href="/">Sessions</a>
+    @if (Account.Current?.IsOrganizer == true)
+    {
+        <a href="/organizer">Organizer</a>
+    }
     <a href="/account">@(Account.IsSignedIn ? "Account" : "Sign in / Create account")</a>
 </nav>
 

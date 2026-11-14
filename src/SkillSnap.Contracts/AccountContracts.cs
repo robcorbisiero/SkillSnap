@@ -10,6 +10,6 @@ public sealed class AccountCredentials
     public string Password { get; set; } = "";
 }
 
-public sealed record AccountInfo(string Email);
+public sealed record AccountInfo(string Email, bool IsOrganizer = false);
 public sealed record CsrfToken(string Token);
 public sealed record LegacyBookingCount(int Count);

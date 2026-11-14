@@ -46,3 +46,16 @@ Verified on November 14, 2026 with .NET SDK 10.0.404.
 - Old anonymous rows survive the migration. Integration tests proved that possession of the original key plus explicit authenticated import is required; matching email alone cannot claim bookings.
 
 Cookie logout and access from a second browser-equivalent HTTP client were tested in the integration suite. A second physical browser/device, automated browser tests, mobile layout, public hosting, and mail verification/recovery have not been verified or implemented in this milestone. See `accounts.md` for local-development limits.
+
+## Milestone 4 — Organizer tools
+
+Verified on November 14, 2026 with the same SDK.
+
+- Solution build passed with zero warnings/errors; release WebAssembly publish passed.
+- All 49 API integration cases passed. New checks cover anonymous/attendee authorization, signup role spoofing, local provisioning and revocation with an existing cookie, Development-only provisioning, create/edit visibility, field/UTC validation, CSRF, booked schedule/capacity protection, missing/started sessions, concurrent edits, and concurrent registration/capacity changes.
+- The revision migration was inspected: it adds Version initialized to zero, without changing existing session details or removing registrations/accounts.
+- The historical-upgrade test was adapted to write the original schema directly rather than querying it through an entity containing newer columns. Original-data preservation remains asserted after upgrade.
+- A signed-in ordinary account opened the real organizer page and correctly saw Organizer access required; no editor or privileged navigation was exposed.
+- The local database was backed up before the revision migration. Database backups, account data, and Data Protection keys remain ignored by Git.
+
+The privileged organizer form still needs a real browser create/edit walkthrough after organizer provisioning. API functionality is covered by the isolated test suite. Mobile layout and automated browser tests remain future work.

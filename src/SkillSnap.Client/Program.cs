@@ -12,4 +12,5 @@ builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(apiBaseUr
 builder.Services.AddScoped<LearningSessionService>();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AccountSession>();
+builder.Services.AddScoped<OrganizerService>();
 await builder.Build().RunAsync();
