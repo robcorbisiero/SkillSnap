@@ -16,8 +16,8 @@
     </div>
     <p class="demo-note">Demo programme · Fictional instructors and sample dates · Registrations are remembered in this browser</p>
     <div class="filters" aria-label="Session filters">
-        <button class="refresh" aria-pressed="@(!mySessionsOnly)" @onclick="() => mySessionsOnly = false">All sessions</button>
-        <button class="refresh" aria-pressed="@mySessionsOnly" @onclick="() => mySessionsOnly = true">My sessions (@sessions.Count(s => s.IsRegistered))</button>
+        <button class="refresh" aria-pressed="@((!mySessionsOnly).ToString().ToLowerInvariant())" @onclick="() => mySessionsOnly = false">All sessions</button>
+        <button class="refresh" aria-pressed="@(mySessionsOnly.ToString().ToLowerInvariant())" @onclick="() => mySessionsOnly = true">My sessions (@sessions.Count(s => s.IsRegistered))</button>
     </div>
     @if (notice is not null)
     {
@@ -42,7 +42,7 @@
     }
     else
     {
-        <p class="count">@VisibleSessions.Count() sessions · Times shown in UTC</p>
+        <p class="count">@VisibleSessions.Count() @(VisibleSessions.Count() == 1 ? "session" : "sessions") · Times shown in UTC</p>
         <div class="session-grid">
         @foreach (var session in VisibleSessions)
         {
