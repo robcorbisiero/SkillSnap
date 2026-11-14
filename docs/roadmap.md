@@ -26,7 +26,7 @@ Acceptance: register -> seat count falls -> My sessions includes it -> refresh p
 - Account isolation, cookie/CSRF, validation, lockout, rate-limit, cross-client, migration/import, and booking tests.
 - Local account UI and documentation. Email ownership verification and recovery are deferred until real mail delivery is configured.
 
-## Milestone 4 — Organizer tools (implemented)
+## Milestone 4 — Organizer tools (complete)
 
 - Server-enforced role policy, checked against current database membership.
 - Development-only local provisioning for existing accounts; no role selection on signup or HTTP role assignment.

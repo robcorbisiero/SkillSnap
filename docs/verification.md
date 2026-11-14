@@ -58,4 +58,6 @@ Verified on November 14, 2026 with the same SDK.
 - A signed-in ordinary account opened the real organizer page and correctly saw Organizer access required; no editor or privileged navigation was exposed.
 - The local database was backed up before the revision migration. Database backups, account data, and Data Protection keys remain ignored by Git.
 
-The privileged organizer form still needs a real browser create/edit walkthrough after organizer provisioning. API functionality is covered by the isolated test suite. Mobile layout and automated browser tests remain future work.
+After organizer provisioning, the existing login immediately gained organizer access without signing in again. The browser rejected an empty creation form, then created a clearly labeled fictional practice session at capacity 20. Editing capacity to 24 saved successfully and advanced the revision to 1. The session appeared in the attendee listing and accepted a registration. With that booking present, the organizer editor disabled start-time and duration changes. Cancelling only the temporary test booking restored availability and unlocked the schedule. The new demo session was retained for local experimentation; the original three sessions were unchanged.
+
+The organizer page was left open with the demo session selected. Mobile layout and automated browser tests remain future work.
