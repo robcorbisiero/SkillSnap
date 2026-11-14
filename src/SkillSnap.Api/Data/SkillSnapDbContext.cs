@@ -5,9 +5,15 @@ namespace SkillSnap.Api.Data;
 public sealed class SkillSnapDbContext(DbContextOptions<SkillSnapDbContext> options) : DbContext(options)
 {
     public DbSet<LearningSession> LearningSessions => Set<LearningSession>();
+    public DbSet<Registration> Registrations => Set<Registration>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
+        var registration = modelBuilder.Entity<Registration>();
+        registration.Property(r => r.ParticipantHash).HasMaxLength(64).IsRequired();
+        registration.HasIndex(r => new { r.LearningSessionId, r.ParticipantHash }).IsUnique();
+        registration.HasOne<LearningSession>().WithMany()
+            .HasForeignKey(r => r.LearningSessionId).OnDelete(DeleteBehavior.Cascade);
         var session = modelBuilder.Entity<LearningSession>();
         session.Property(s => s.Title).HasMaxLength(160).IsRequired();
         session.Property(s => s.Description).HasMaxLength(2000).IsRequired();

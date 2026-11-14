@@ -215,3 +215,10 @@ footer {
   flex-direction:column;
   margin-top:40px}
 }
+
+.filters { display: flex; gap: 10px; margin: 18px 0; flex-wrap: wrap; }
+.filters [aria-pressed=true] { background: #166653; color: white; }
+.booking-button { width: 100%; margin-top: 18px; }
+.registered { color: #166653; font-size: 14px; font-weight: 700; margin-bottom: 0; }
+.booking-notice { padding: 14px 18px; background: #e9f3ec; border: 1px solid #76ac91; border-radius: 8px; }
+.booking-notice.error { background: #fff1ee; border-color: #af5b4c; }

@@ -93,6 +93,37 @@ namespace SkillSnap.Api.Data.Migrations
                             Topic = "Entity Framework Core"
                         });
                 });
+
+            modelBuilder.Entity("SkillSnap.Api.Data.Registration", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("INTEGER");
+
+                    b.Property<int>("LearningSessionId")
+                        .HasColumnType("INTEGER");
+
+                    b.Property<string>("ParticipantHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("TEXT");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("LearningSessionId", "ParticipantHash")
+                        .IsUnique();
+
+                    b.ToTable("Registrations");
+                });
+
+            modelBuilder.Entity("SkillSnap.Api.Data.Registration", b =>
+                {
+                    b.HasOne("SkillSnap.Api.Data.LearningSession", null)
+                        .WithMany()
+                        .HasForeignKey("LearningSessionId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+                });
 #pragma warning restore 612, 618
         }
     }

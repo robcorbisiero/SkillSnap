@@ -2,7 +2,9 @@
 
 A learning-session planner built with C#, Blazor WebAssembly, ASP.NET Core Web API, and SQLite through Entity Framework Core.
 
-**Milestone 1: discover learning sessions.** The browser retrieves real database-backed sessions from `GET /api/learning-sessions`. The responsive UI handles loading, no sessions, failed requests, and retry. Sample dates and instructors are fictional. All session times are displayed in UTC.
+**Milestone 2: register and cancel.** Browse database-backed sessions, see available seats, register, cancel, and filter to My sessions. The responsive UI handles loading, empty results, failed requests, and retry. Sample dates and instructors are fictional. All session times are displayed in UTC.
+
+Registrations belong to this browser through a random key saved in local storage. They survive refreshes and API restarts. No name or email is collected. Clearing browser storage loses access to those registrations; another browser/device has a different identity. This is an anonymous local demo, not user authentication. See the [development plan](docs/roadmap.md) for the account milestone.
 
 This is a new, independent portfolio project. **This repository was not the code submitted to Coursera.** It does not establish that the application described in earlier coursework was implemented at that time.
 
@@ -38,7 +40,7 @@ In terminal 1, from the repository root:
 dotnet run --project src/SkillSnap.Api --launch-profile http
 ```
 
-The API listens on `http://localhost:5080`. On first startup it applies the committed EF migration, creates `src/SkillSnap.Api/App_Data/skillsnap.db`, and inserts three demo sessions. Subsequent starts retain the database and do not duplicate or reinsert demo rows.
+The API listens on `http://localhost:5080`. On first startup it applies the committed EF migrations, creates `src/SkillSnap.Api/App_Data/skillsnap.db`, and inserts three demo sessions. Existing milestone 1 databases are upgraded without removing sessions. Subsequent starts retain sessions and registrations without duplicating demo rows.
 
 In terminal 2, from the same repository root:
 
@@ -46,7 +48,7 @@ In terminal 2, from the same repository root:
 dotnet run --project src/SkillSnap.Client --launch-profile http
 ```
 
-Open [http://localhost:5180](http://localhost:5180). Expect three session cards. Refresh sessions repeats the API request. Stop either app with Ctrl+C in its terminal.
+Open [http://localhost:5180](http://localhost:5180). Expect three session cards. Click Register for session: the available count drops and the card shows You’re registered. My sessions shows your bookings. Refresh the page to confirm the booking remains, then click Cancel registration to release the seat. Refresh sessions requests the latest server state, including changes made by other visitors. Stop either app with Ctrl+C in its terminal.
 
 You can also inspect the API directly:
 
@@ -62,7 +64,7 @@ On macOS/Linux, use the same `dotnet` commands and `curl http://localhost:5080/a
 Browser: Blazor WebAssembly (localhost:5180)
    Home.razor -> LearningSessionService -> HttpClient
                            |
-                 GET /api/learning-sessions
+                 GET sessions / POST or DELETE registration
                            v
 ASP.NET Core API (localhost:5080)
    Program.cs endpoint -> SkillSnapDbContext -> SQLite file
@@ -73,11 +75,11 @@ Blazor renders session cards
 ```
 
 - `src/SkillSnap.Client`: the C# UI runs in the browser. Its service calls the API and deserializes JSON; the component displays the result. Database access never runs in the browser.
-- `src/SkillSnap.Api`: a separate ASP.NET Core process exposes a read-only HTTP endpoint. EF Core translates an asynchronous, untracked LINQ query into SQLite SQL, ordered by start time and then ID.
+- `src/SkillSnap.Api`: a separate ASP.NET Core process exposes listing and registration endpoints in `Endpoints/SessionEndpoints.cs`. EF Core reads sessions and registration counts from SQLite. The booking insert checks capacity and start time in one parameterized SQLite statement, preventing concurrent requests from overbooking. A unique participant/session index also enforces one registration per browser per session.
 - `src/SkillSnap.Contracts`: a small shared DTO library defines the response shape without exposing database entities or EF Core to the UI.
-- `tests/SkillSnap.Api.Tests`: xUnit integration tests run the real API pipeline against isolated SQLite files, including actual migrations. They cover seeded JSON and UTC timestamps, an empty table, persisted data ordering, CORS, and persistence across API restarts.
+- `tests/SkillSnap.Api.Tests`: xUnit integration tests run the real API pipeline against isolated SQLite files, including migrations. They cover listings, registration/cancellation, duplicate and concurrent requests, capacity, participant isolation, CORS, and restart persistence.
 
-The API allows browser requests from `http://localhost:5180` using CORS. CORS is a browser policy, not authentication. This milestone contains no accounts, registration, cancellation, attendance, administration, or deployment. It is a local development foundation.
+The API allows browser requests from `http://localhost:5180` using CORS. CORS is a browser policy, not authentication. Accounts, attendance, organizer administration, and deployment are later milestones. This remains a local development foundation.
 
 ## API contract
 
@@ -93,12 +95,33 @@ The API allows browser requests from `http://localhost:5180` using CORS. CORS is
     "instructor": "Alex Morgan",
     "startsAtUtc": "2027-01-12T18:00:00Z",
     "durationMinutes": 60,
-    "capacity": 20
+    "capacity": 20,
+    "registeredCount": 0,
+    "isRegistered": false,
+    "seatsRemaining": 20
   }
 ]
 ```
 
-The response includes all sessions, including past dates. Capacity is the configured group size, not remaining seats. There is no write endpoint yet. Server failures use ASP.NET Core problem details; the UI shows a friendly message with a retry action.
+The response includes all sessions, including past dates. `capacity` is the configured group size; `registeredCount` and `seatsRemaining` reflect saved bookings. With no participant header, `isRegistered` is false. The API never returns participant keys, hashes, or lists of attendees.
+
+| Method and route | Behavior |
+| --- | --- |
+| `POST /api/learning-sessions/{id}/registration` | Register this browser. Returns 204; repeated requests are idempotent. New bookings return 409 for a full or started session. |
+| `DELETE /api/learning-sessions/{id}/registration` | Cancel only this browser's booking. Returns 204, including when already cancelled. Cancellation is allowed after a session starts. |
+
+Both mutations require one `X-Participant-Key` header containing a nonempty UUID. Invalid/missing keys return 400; nonexistent sessions return 404. Listing accepts the same header to include personal registration status (an invalid supplied key returns 400). The server normalizes the UUID and stores its SHA-256 hash. The raw key is a demo bearer credential: anyone who obtains it can manage those registrations. Keys are kept out of URLs and server responses. Production accounts, HTTPS, abuse prevention, and authorization are required before public use.
+
+For a manual API exercise in PowerShell:
+
+```powershell
+$headers = @{ 'X-Participant-Key' = [guid]::NewGuid().ToString('N') }
+Invoke-WebRequest http://localhost:5080/api/learning-sessions/1/registration -Method Post -Headers $headers
+Invoke-RestMethod http://localhost:5080/api/learning-sessions -Headers $headers | Format-Table
+Invoke-WebRequest http://localhost:5080/api/learning-sessions/1/registration -Method Delete -Headers $headers
+```
+
+This terminal key is separate from the browser key. Bookings are available until the session's UTC start time. On network failure the UI recommends refreshing, because a request may have reached the server even if its response was lost. Retrying is safe. If a change is saved but refreshing fails, the UI says so explicitly. Availability refreshes on page load, manual refresh, and successful registration changes; it is not a live push feed.
 
 ## Configuration and troubleshooting
 
@@ -114,7 +137,7 @@ The response includes all sessions, including past dates. Capacity is the config
 
 ## Database migrations
 
-The initial migration and model snapshot are committed. Normal startup applies migrations automatically for this local milestone. No manual EF command is needed to run it. Production migration execution should be a controlled deployment step.
+The initial and registration migrations and the model snapshot are committed. Normal startup applies migrations automatically for this local milestone. No manual EF command is needed to run it. Production migration execution should be a controlled deployment step.
 
 To change the schema later, install the repository-local EF tool and add a migration:
 
@@ -135,4 +158,4 @@ dotnet publish src/SkillSnap.Client -c Release -o artifacts/client
 
 GitHub Actions restores, builds, runs integration tests, and publishes the WebAssembly client on pushes and pull requests. Browser interactions are checked manually; automated UI tests are a future addition.
 
-Next milestones: validated session creation, registration/cancellation, user identity and authorization, then deployment. Add these in small changes with tests as the project grows.
+Next milestone: user identity and authorization, followed by validated organizer session creation, attendance, and deployment. See [the roadmap](docs/roadmap.md). Add these in small changes with tests as the project grows.
