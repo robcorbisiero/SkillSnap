@@ -1,34 +1,67 @@
-# Vercel deployment design
+# Vercel and Supabase hosting
 
-Status: architecture decision in progress. No Vercel project, database, public deployment, or paid resource has been created for SkillSnap.
+Status (November 15, 2026): the production container and all 64 tests against both SQLite and PostgreSQL passed GitHub Actions. Supabase is provisioned and migrated. Vercel deployment and hosted browser verification are pending; there is no verified live app URL yet.
 
-Vercel's Container Runtime can run the existing ASP.NET Core HTTP server in a Docker image. It is currently Beta on all plans. The Blazor WebAssembly frontend can remain unchanged as a static build. The app does not need to be rewritten into JavaScript.
+## Architecture
 
-Sources checked November 14, 2026:
+Vercel builds Dockerfile.vercel. ASP.NET Core serves the published Blazor WebAssembly files and /api under the same HTTPS origin. The browser uses a relative API address, so each deployment calls its own backend. The container runs as a non-root user.
 
-- [Container Runtime](https://vercel.com/docs/functions/runtimes/container)
-- [Services](https://vercel.com/docs/services)
-- [SQLite on Vercel](https://vercel.com/kb/guide/is-sqlite-supported-in-vercel)
+Supabase stores application data in the private skillsnap PostgreSQL schema. ASP.NET Identity still handles accounts and cookies; Supabase Auth and the browser Data API are not used. Cookie encryption keys are shared through the database, so container replacement can preserve logins. The runtime login owns only the app schema and its objects, with no superuser, role-creation, database-creation, or global RLS-bypass privileges. RLS denies non-owner access; anon, authenticated, and PUBLIC have no app-schema grants. The API enforces user and organizer authorization.
 
-## Recommended full Vercel setup
+Registration and organizer capacity writes lock the same session row in PostgreSQL before checking availability. SQLite retains its existing atomic writes. Existing SQLite migrations and local accounts remain separate.
 
-Serve the browser app and container API under one Vercel origin and use hosted PostgreSQL for persistent application data. Preserve SQLite as the local-development provider. Keep login-cookie Data Protection keys in durable shared storage rather than an instance-local directory.
+## Resources
 
-Before deployment, implement and verify:
+- GitHub: robcorbisiero/SkillSnap (private).
+- Supabase: skillsnap, Rob organization, Canada Central, ref wwovsjuaeeiwpgcwajqq.
+- Fresh hosted data: three starter sessions, no local accounts or private key files uploaded.
+- corbitpros-dev was paused to free the active free-project slot, preserving its data. It was not deleted. corbitpros was not modified.
+- Supabase quoted a $0 monthly project base cost at creation. Usage and future plan changes follow the provider's limits.
+- Vercel target: Robert Corbisiero's projects (team_OStWubjQkx70NcWltvFuGjBK). Connector project creation returned 403; website setup is pending.
 
-1. A repeatable frontend/container build with a relative API address. Preview deployments must call their own API, not localhost or the production URL.
-2. PostgreSQL-specific EF migrations while preserving the existing SQLite migrations and local data.
-3. Provider-aware transactional locking for booking/capacity updates. The current single-statement SQLite safety argument must not simply be assumed to hold under PostgreSQL concurrency.
-4. Durable shared Data Protection key storage so cookie validation survives container replacement and scaling.
-5. Production configuration, health checks, HTTPS/proxy handling, isolated preview data, and a deliberate organizer-provisioning process.
-6. Tests against real PostgreSQL as well as the local SQLite suite, then an actual protected preview walkthrough.
+## Deployment configuration
 
-Database provisioning/provider choice and any billing or terms need to be resolved before creating resources. Do not upload the local accounts database or cookie keys into the source repository or an image. Use fresh hosted demo data unless an explicit data migration is requested.
+Use the Container framework, repository root, and Dockerfile.vercel. Project settings need PORT=8080, ASPNETCORE_HTTP_PORTS=8080, Database__Provider=Postgres, and a sensitive server-only ConnectionStrings__SkillSnap variable. The first protected preview uses the fresh hosted demo database; do not point future unreviewed previews at production data.
 
-## Alternative retaining the backend unchanged
+The connection string uses the verified Supabase session pooler on port 5432, a restricted application login, SSL Mode=VerifyFull, Root Certificate=/app/Certificates/supabase-prod-ca-2021.crt, and Maximum Pool Size=5. Session mode preserves connection session state across EF operations. Do not disable TLS certificate validation to resolve connection errors. The public CA certificate came from the project's Database Settings download link; it contains no private key.
 
-Deploy the Blazor frontend on Vercel and host the ASP.NET Core/SQLite API on a server with durable storage. Prefer routing API requests through the same public site to preserve cookie behavior. The backend still needs a selected host, persistent database/key storage, HTTPS, and deployment verification. This uses two hosting services but avoids a production database-provider migration.
+Never put database credentials in wwwroot, Git, build arguments, or screenshots. Never upload App_Data. The Docker build excludes local databases and keys. Production cookies require HTTPS. /health checks database connectivity; unknown /api routes return 404 instead of the browser app.
 
-## Current limitations
+## Setup and checks
 
-A local SQLite file and local key directory are not durable application state on Vercel Functions, including its container runtime. Vercel Daemons are a background-worker product, not a direct replacement for the HTTP API host. No hosted version is claimed ready until its state, identity, and concurrency behavior are tested. Public signup also needs an explicit decision about the currently deferred email verification/recovery work.
+Local SQLite setup stays in the README. With a disposable PostgreSQL server available, set SKILLSNAP_TEST_POSTGRES privately to its admin connection and run:
+
+```powershell
+dotnet test SkillSnap.slnx
+Remove-Item Env:SKILLSNAP_TEST_POSTGRES
+```
+
+Tests create and drop uniquely named test databases. Do not use a production server for this test suite.
+
+With Docker installed:
+
+```powershell
+docker build -f Dockerfile.vercel -t skillsnap .
+```
+
+PostgreSQL migrations use a separate context and history in the app schema:
+
+```powershell
+dotnet tool restore
+dotnet ef migrations add YourPostgresChange --context PostgresSkillSnapDbContext --output-dir Data/PostgresMigrations --project src/SkillSnap.Api
+dotnet ef migrations script --context PostgresSkillSnapDbContext --project src/SkillSnap.Api -o artifacts/postgres.sql
+```
+
+Review and apply database changes as a controlled deployment step. Startup also checks/applies pending EF migrations using the configured provider. The initial hosted migration was applied through Supabase with the matching EF history entry. Keep both providers' model changes synchronized.
+
+## Readiness limits
+
+Vercel Container Runtime is Beta on all plans. A protected hosted walkthrough must verify signup, login, booking/cancellation, organizer access, attendance, and state after container replacement before calling hosting complete. Hosted organizer access needs explicit approval for the intended hosted account; the earlier local grant does not grant hosted access. Email verification and password recovery remain unfinished, so keep the initial deployment protected.
+
+Sources checked November 15, 2026:
+
+- [Vercel Container Runtime](https://vercel.com/docs/functions/runtimes/container)
+- [Supabase connection options](https://supabase.com/docs/guides/database/connecting-to-postgres)
+- [Supabase TLS certificate verification](https://supabase.com/docs/guides/platform/ssl-enforcement)
+
+Supabase's advisor reports informational RLS Enabled No Policy notices for the private tables. This is deliberate: the backend schema owner accesses them, while roles used by the browser Data API are denied. [Advisor explanation](https://supabase.com/docs/guides/database/database-linter?lint=0008_rls_enabled_no_policy).

@@ -183,7 +183,7 @@ To change the schema later, install the repository-local EF tool and add a migra
 
 ```powershell
 dotnet tool restore
-dotnet ef migrations add YourChange --project src/SkillSnap.Api
+dotnet ef migrations add YourChange --context SkillSnapDbContext --project src/SkillSnap.Api
 dotnet run --project src/SkillSnap.Api --launch-profile http
 ```
 
@@ -196,6 +196,6 @@ dotnet test SkillSnap.slnx
 dotnet publish src/SkillSnap.Client -c Release -o artifacts/client
 ```
 
-GitHub Actions restores, builds, runs integration tests, and publishes the WebAssembly client on pushes and pull requests. Browser interactions are checked manually; automated UI tests are a future addition.
+GitHub Actions builds the solution, runs the 64 integration tests against SQLite and PostgreSQL, publishes the WebAssembly client, builds the production container, and checks its health, browser routes, API fallback, and relative API configuration. Browser interactions are checked manually; automated UI tests are a future addition.
 
-Next: review deployment requirements and hosting. Email verification and password recovery need a real mail setup before public account use. See [the roadmap](docs/roadmap.md).
+Hosting uses Vercel's container runtime and a separate Supabase PostgreSQL database; SQLite remains the local default. See [deployment setup and status](docs/vercel-plan.md). Email verification and password recovery need a real mail setup before public account use. See [the roadmap](docs/roadmap.md).
