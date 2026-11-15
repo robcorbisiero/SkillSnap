@@ -23,7 +23,7 @@ Registration and organizer capacity writes lock the same session row in PostgreS
 
 Use the Container framework, repository root, and Dockerfile.vercel. Project settings need PORT=8080, ASPNETCORE_HTTP_PORTS=8080, Database__Provider=Postgres, and a sensitive server-only ConnectionStrings__SkillSnap variable. This secret is configured for Production only. Do not point unreviewed Preview builds at this database; supply a separate database if enabling previews. All deployments currently require Vercel team sign-in.
 
-The connection string uses the verified Supabase session pooler on port 5432, a restricted application login, SSL Mode=VerifyFull, Root Certificate=/app/Certificates/supabase-prod-ca-2021.crt, and Maximum Pool Size=5. Session mode preserves connection session state across EF operations. Do not disable TLS certificate validation to resolve connection errors. The public CA certificate came from the project's Database Settings download link; it contains no private key.
+The runtime connection uses Supabase's transaction pooler on port 6543, a restricted application login, SSL Mode=VerifyFull, Root Certificate=/app/Certificates/supabase-prod-ca-2021.crt, Maximum Pool Size=5, Connection Idle Lifetime=15, Connection Pruning Interval=10, and Max Auto Prepare=0. A hosted walkthrough exposed connection exhaustion with session pooling as Vercel scaled containers; transaction pooling releases backend connections between transactions. Automatic prepared statements are explicitly disabled. The role's default search path is skillsnap. Do not disable TLS certificate validation. The public CA certificate came from Database Settings; it contains no private key.
 
 Never put database credentials in wwwroot, Git, build arguments, or screenshots. Never upload App_Data. The Docker build excludes local databases and keys. Production cookies require HTTPS. /health checks database connectivity; unknown /api routes return 404 instead of the browser app.
 
@@ -52,7 +52,7 @@ dotnet ef migrations add YourPostgresChange --context PostgresSkillSnapDbContext
 dotnet ef migrations script --context PostgresSkillSnapDbContext --project src/SkillSnap.Api -o artifacts/postgres.sql
 ```
 
-Review and apply database changes as a controlled deployment step. Startup also checks/applies pending EF migrations using the configured provider. The initial hosted migration was applied through Supabase with the matching EF history entry. Keep both providers' model changes synchronized.
+Review and apply hosted database changes once as a controlled deployment step through a direct/session connection. Vercel cold starts skip migrations; local startup applies migrations normally. Database__MigrateOnStartup=true is an explicit override used only by the disposable CI smoke test. The initial hosted migration was applied through Supabase with the matching EF history entry. Keep both providers' model changes synchronized.
 
 ## Readiness limits
 

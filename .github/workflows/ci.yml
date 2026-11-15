@@ -39,6 +39,7 @@ jobs:
         run: |
           docker run -d --name skillsnap-smoke --network host \
             -e Database__Provider=Postgres \
+            -e Database__MigrateOnStartup=true \
             -e 'ConnectionStrings__SkillSnap=Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=skillsnap-ci-only' \
             -e VERCEL=1 skillsnap-ci
           trap 'docker logs skillsnap-smoke; docker rm -f skillsnap-smoke' EXIT
@@ -47,6 +48,7 @@ jobs:
             sleep 2
           done
           curl --fail --silent http://localhost:8080/health
+          curl --fail --silent http://localhost:8080/api/learning-sessions | grep 'Build your first Blazor component'
           curl --fail --silent http://localhost:8080/ | grep 'SkillSnap'
           curl --fail --silent http://localhost:8080/account | grep 'id="app"'
           test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/missing)" = '404'

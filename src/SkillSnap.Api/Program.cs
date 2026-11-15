@@ -18,7 +18,7 @@ if (onVercel && !postgres) throw new InvalidOperationException("Vercel requires 
 if (postgres)
 {
     var pg = new NpgsqlConnectionStringBuilder(builder.Configuration.GetConnectionString("SkillSnap")
-        ?? throw new InvalidOperationException("A PostgreSQL connection string is required.")) { SearchPath = "skillsnap" };
+        ?? throw new InvalidOperationException("A PostgreSQL connection string is required.")) { SearchPath = "skillsnap", MaxAutoPrepare = 0 };
     builder.Services.AddDbContext<PostgresSkillSnapDbContext>(options => options.UseNpgsql(pg.ConnectionString,
         provider => provider.MigrationsHistoryTable("__EFMigrationsHistory", "skillsnap")));
     builder.Services.AddScoped<SkillSnapDbContext>(services => services.GetRequiredService<PostgresSkillSnapDbContext>());
@@ -90,6 +90,9 @@ app.UseAuthentication();
 app.UseAuthorization();
 app.UseRateLimiter();
 if (!postgres) Directory.CreateDirectory(Path.Combine(app.Environment.ContentRootPath, "App_Data"));
+// Hosted schema changes are applied once as a controlled deployment step.
+// Cold starts (including static asset requests) must not acquire migration locks.
+if (!onVercel || builder.Configuration.GetValue<bool>("Database:MigrateOnStartup"))
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<SkillSnapDbContext>();
