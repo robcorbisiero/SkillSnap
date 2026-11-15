@@ -7,6 +7,18 @@ permissions:
 jobs:
   verify:
     runs-on: ubuntu-latest
+    services:
+      postgres:
+        image: postgres:17
+        env:
+          POSTGRES_PASSWORD: skillsnap-ci-only
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 5s
+          --health-timeout 5s
+          --health-retries 10
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-dotnet@v4
@@ -15,4 +27,27 @@ jobs:
       - run: dotnet restore SkillSnap.slnx
       - run: dotnet build SkillSnap.slnx -c Release --no-restore
       - run: dotnet test SkillSnap.slnx -c Release --no-build --logger trx
+      - name: Test against PostgreSQL
+        run: dotnet test SkillSnap.slnx -c Release --no-build --logger trx
+        env:
+          SKILLSNAP_TEST_POSTGRES: 'Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=skillsnap-ci-only'
       - run: dotnet publish src/SkillSnap.Client -c Release --no-restore -o artifacts/client
+      - name: Build Vercel container
+        run: docker build -f Dockerfile.vercel -t skillsnap-ci .
+      - name: Verify production container
+        shell: bash
+        run: |
+          docker run -d --name skillsnap-smoke --network host \
+            -e Database__Provider=Postgres \
+            -e 'ConnectionStrings__SkillSnap=Host=localhost;Port=5432;Database=postgres;Username=postgres;Password=skillsnap-ci-only' \
+            -e VERCEL=1 skillsnap-ci
+          trap 'docker logs skillsnap-smoke; docker rm -f skillsnap-smoke' EXIT
+          for attempt in $(seq 1 60); do
+            if curl --fail --silent http://localhost:8080/health; then break; fi
+            sleep 2
+          done
+          curl --fail --silent http://localhost:8080/health
+          curl --fail --silent http://localhost:8080/ | grep 'SkillSnap'
+          curl --fail --silent http://localhost:8080/account | grep 'id="app"'
+          test "$(curl -s -o /dev/null -w '%{http_code}' http://localhost:8080/api/missing)" = '404'
+          curl --fail --silent http://localhost:8080/appsettings.json | grep '"ApiBaseUrl":""'

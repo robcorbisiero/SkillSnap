@@ -1,0 +1,13 @@
+.git
+**/bin
+**/obj
+**/App_Data
+**/TestResults
+artifacts
+.env
+.env.*
+**/*.db
+**/*.db-wal
+**/*.db-shm
+**/*.pfx
+**/*.pem

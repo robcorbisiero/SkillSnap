@@ -1,0 +1,12 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "framework": "container",
+  "env": {
+    "PORT": "8080",
+    "ASPNETCORE_HTTP_PORTS": "8080",
+    "Database__Provider": "Postgres"
+  },
+  "headers": [
+    { "source": "/api/(.*)", "headers": [{ "key": "Cache-Control", "value": "no-store" }] }
+  ]
+}

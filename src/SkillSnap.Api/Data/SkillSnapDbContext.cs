@@ -5,8 +5,10 @@ using SkillSnap.Contracts;
 
 namespace SkillSnap.Api.Data;
 
-public sealed class SkillSnapDbContext(DbContextOptions<SkillSnapDbContext> options) : IdentityDbContext<IdentityUser>(options)
+public class SkillSnapDbContext : IdentityDbContext<IdentityUser>
 {
+    public SkillSnapDbContext(DbContextOptions<SkillSnapDbContext> options) : base(options) { }
+    protected SkillSnapDbContext(DbContextOptions options) : base(options) { }
     public DbSet<LearningSession> LearningSessions => Set<LearningSession>();
     public DbSet<Registration> Registrations => Set<Registration>();
 

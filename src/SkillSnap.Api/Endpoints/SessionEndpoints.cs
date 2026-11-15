@@ -40,6 +40,7 @@ public static class SessionEndpoints
     {
         var userId = user.FindFirstValue(ClaimTypes.NameIdentifier)!;
         var now = DateTime.UtcNow;
+        await using var writeScope = await SessionWriteScope.AcquireAsync(db, id, ct);
         // One SQLite write statement serializes the capacity check and insert.
         // Parameters are bound by EF; no user input is concatenated into SQL.
         var inserted = await db.Database.ExecuteSqlInterpolatedAsync($"""
@@ -49,6 +50,7 @@ public static class SessionEndpoints
               AND (SELECT COUNT(*) FROM "Registrations" WHERE "LearningSessionId" = s."Id") < s."Capacity"
               AND NOT EXISTS (SELECT 1 FROM "Registrations" WHERE "LearningSessionId" = s."Id" AND "UserId" = {userId})
             """, ct);
+        if (writeScope is not null) await writeScope.CommitAsync(ct);
         if (inserted == 1) return Results.NoContent();
         if (await db.Registrations.AnyAsync(r => r.LearningSessionId == id && r.UserId == userId, ct))
             return Results.NoContent(); // A retry must not consume another seat.

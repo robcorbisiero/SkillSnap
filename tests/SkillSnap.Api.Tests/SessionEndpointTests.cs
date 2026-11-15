@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Http.Json;
+using Microsoft.AspNetCore.DataProtection;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -28,7 +29,7 @@ public sealed class SessionEndpointTests
         Assert.All(sessions, s => Assert.Equal(DateTimeKind.Utc, s.StartsAtUtc.Kind));
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<SkillSnapDbContext>();
-        Assert.Equal(5, (await db.Database.GetAppliedMigrationsAsync()).Count());
+        Assert.Equal(db.Database.IsNpgsql() ? 1 : 5, (await db.Database.GetAppliedMigrationsAsync()).Count());
     }
 
     [Fact]
@@ -105,18 +106,48 @@ public sealed class SessionEndpointTests
 internal sealed class SessionFactory(string? databasePath = null) : WebApplicationFactory<Program>
 {
     private readonly string path = databasePath ?? Path.Combine(Path.GetTempPath(), $"skillsnap-{Guid.NewGuid():N}.db");
+    private string? postgresConnection;
+    private string? postgresDatabase;
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
+        if (databasePath is null && Environment.GetEnvironmentVariable("SKILLSNAP_TEST_POSTGRES") is { Length: > 0 } adminConnection)
+        {
+            postgresDatabase = $"skillsnap_test_{Guid.NewGuid():N}";
+            using var admin = new Npgsql.NpgsqlConnection(adminConnection);
+            admin.Open();
+            using var create = new Npgsql.NpgsqlCommand($"CREATE DATABASE \"{postgresDatabase}\"", admin);
+            create.ExecuteNonQuery();
+            postgresConnection = new Npgsql.NpgsqlConnectionStringBuilder(adminConnection)
+                { Database = postgresDatabase, SearchPath = "skillsnap" }.ConnectionString;
+        }
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<SkillSnapDbContext>>();
             services.RemoveAll<IDbContextOptionsConfiguration<SkillSnapDbContext>>();
-            services.AddDbContext<SkillSnapDbContext>(options => options.UseSqlite($"Data Source={path};Pooling=False"));
+            if (postgresConnection is null)
+                services.AddDbContext<SkillSnapDbContext>(options => options.UseSqlite($"Data Source={path};Pooling=False"));
+            else
+            {
+                services.RemoveAll<SkillSnapDbContext>();
+                services.AddDbContext<SkillSnap.Api.Data.PostgresSkillSnapDbContext>(options => options.UseNpgsql(postgresConnection,
+                    pg => pg.MigrationsHistoryTable("__EFMigrationsHistory", "skillsnap")));
+                services.AddScoped<SkillSnapDbContext>(sp => sp.GetRequiredService<SkillSnap.Api.Data.PostgresSkillSnapDbContext>());
+                services.AddDataProtection().PersistKeysToDbContext<SkillSnap.Api.Data.PostgresSkillSnapDbContext>();
+            }
         });
     }
     protected override void Dispose(bool disposing)
     {
         base.Dispose(disposing);
         if (disposing && databasePath is null) File.Delete(path);
+        if (disposing && postgresDatabase is not null)
+        {
+            using var pool = new Npgsql.NpgsqlConnection(postgresConnection);
+            Npgsql.NpgsqlConnection.ClearPool(pool);
+            using var admin = new Npgsql.NpgsqlConnection(Environment.GetEnvironmentVariable("SKILLSNAP_TEST_POSTGRES"));
+            admin.Open();
+            using var drop = new Npgsql.NpgsqlCommand($"DROP DATABASE \"{postgresDatabase}\" WITH (FORCE)", admin);
+            drop.ExecuteNonQuery();
+        }
     }
 }

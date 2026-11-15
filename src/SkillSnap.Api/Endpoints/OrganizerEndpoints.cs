@@ -57,6 +57,7 @@ public static class OrganizerEndpoints
         var topic = input.Topic.Trim();
         var instructor = input.Instructor.Trim();
         var now = DateTime.UtcNow;
+        await using var writeScope = await SessionWriteScope.AcquireAsync(db, id, ct);
         // Capacity, schedule protection, and version comparison share one SQLite write.
         // A concurrent registration or edit cannot slip between a check and an update.
         var changed = await db.Database.ExecuteSqlInterpolatedAsync($"""
@@ -69,6 +70,7 @@ public static class OrganizerEndpoints
               AND (NOT EXISTS (SELECT 1 FROM "Registrations" WHERE "LearningSessionId" = s."Id")
                    OR (s."StartsAtUtc" = {input.StartsAtUtc} AND s."DurationMinutes" = {input.DurationMinutes}))
             """, ct);
+        if (writeScope is not null) await writeScope.CommitAsync(ct);
         if (changed == 1) return Results.NoContent();
         if (!await db.LearningSessions.AnyAsync(s => s.Id == id, ct)) return Results.NotFound();
         return Results.Problem(statusCode: 409, title: "Session could not be updated.",
