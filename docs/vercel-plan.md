@@ -1,6 +1,6 @@
 # Vercel and Supabase hosting
 
-Status (November 15, 2026): the production container and all 64 tests against both SQLite and PostgreSQL passed GitHub Actions. Supabase is provisioned and migrated. Vercel deployment and hosted browser verification are pending; there is no verified live app URL yet.
+Status (November 15, 2026): deployed at https://skillsnap-umber.vercel.app with Vercel Authentication enabled for All Deployments. The hosted session listing reads the three starter sessions from Supabase. Hosted account and organizer walkthroughs are in progress. The production container and all 64 tests against both SQLite and PostgreSQL passed GitHub Actions.
 
 ## Architecture
 
@@ -17,11 +17,11 @@ Registration and organizer capacity writes lock the same session row in PostgreS
 - Fresh hosted data: three starter sessions, no local accounts or private key files uploaded.
 - corbitpros-dev was paused to free the active free-project slot, preserving its data. It was not deleted. corbitpros was not modified.
 - Supabase quoted a $0 monthly project base cost at creation. Usage and future plan changes follow the provider's limits.
-- Vercel target: Robert Corbisiero's projects (team_OStWubjQkx70NcWltvFuGjBK). Connector project creation returned 403; website setup is pending.
+- Vercel project: skillsnap in Robert Corbisiero's projects. Created through the website after the connector denied creation. Verified connected deployment: dpl_97xrwnt7PEkTrBiW3bBQdYN7ZCJG, source commit 93d172c.
 
 ## Deployment configuration
 
-Use the Container framework, repository root, and Dockerfile.vercel. Project settings need PORT=8080, ASPNETCORE_HTTP_PORTS=8080, Database__Provider=Postgres, and a sensitive server-only ConnectionStrings__SkillSnap variable. The first protected preview uses the fresh hosted demo database; do not point future unreviewed previews at production data.
+Use the Container framework, repository root, and Dockerfile.vercel. Project settings need PORT=8080, ASPNETCORE_HTTP_PORTS=8080, Database__Provider=Postgres, and a sensitive server-only ConnectionStrings__SkillSnap variable. This secret is configured for Production only. Do not point unreviewed Preview builds at this database; supply a separate database if enabling previews. All deployments currently require Vercel team sign-in.
 
 The connection string uses the verified Supabase session pooler on port 5432, a restricted application login, SSL Mode=VerifyFull, Root Certificate=/app/Certificates/supabase-prod-ca-2021.crt, and Maximum Pool Size=5. Session mode preserves connection session state across EF operations. Do not disable TLS certificate validation to resolve connection errors. The public CA certificate came from the project's Database Settings download link; it contains no private key.
 
