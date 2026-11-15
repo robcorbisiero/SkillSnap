@@ -1,6 +1,6 @@
 # Vercel and Supabase hosting
 
-Status (November 15, 2026): deployed at https://skillsnap-umber.vercel.app with Vercel Authentication enabled for All Deployments. Verified hosted signup, authenticated session listing, registration, My sessions, booking persistence after reload, and cancellation. Sign-in survived replacement by the corrected deployment. The test booking was removed; the hosted account remains. Organizer access is awaiting explicit hosted-account approval. The production container and all 64 tests against both SQLite and PostgreSQL passed GitHub Actions for the runtime fix.
+Status (November 15, 2026): deployed at https://skillsnap-umber.vercel.app with Vercel Authentication enabled for All Deployments. Verified hosted signup, authenticated session listing, registration, My sessions, booking persistence after reload, and cancellation. Sign-in survived replacement by the corrected deployment. The test booking was removed; the hosted account remains. Hosted Organizer access was explicitly approved and granted. Session creation, capacity editing, attendance recording, correction, clearing, and cancellation after clearing were verified in the browser. The labelled C# practice lab (hosted demo) remains with capacity 24 and no bookings. The production container and all 64 tests against both SQLite and PostgreSQL passed GitHub Actions for the runtime fix.
 
 ## Architecture
 
@@ -58,7 +58,7 @@ Review and apply hosted database changes once as a controlled deployment step th
 
 ## Readiness limits
 
-Vercel Container Runtime is Beta on all plans. The hosted learner walkthrough is verified; hosted organizer and attendance checks remain. Hosted organizer access needs explicit approval for the intended hosted account; the earlier local grant does not grant hosted access. Email verification and password recovery remain unfinished, so keep the deployment protected. Npgsql transaction-pooling options are necessary even for a small demo because Vercel can start multiple containers for concurrent requests.
+Vercel Container Runtime is Beta on all plans. The hosted learner, organizer, and attendance walkthroughs are verified. The hosted role was granted separately after explicit approval; local roles do not transfer automatically. Email verification and password recovery remain unfinished, so keep the deployment protected. Npgsql transaction-pooling options are necessary even for a small demo because Vercel can start multiple containers for concurrent requests.
 
 Sources checked November 15, 2026:
 
