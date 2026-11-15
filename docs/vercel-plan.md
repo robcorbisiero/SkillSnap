@@ -27,6 +27,8 @@ The runtime connection uses Supabase's transaction pooler on port 6543, a restri
 
 Never put database credentials in wwwroot, Git, build arguments, or screenshots. Never upload App_Data. The Docker build excludes local databases and keys. Production cookies require HTTPS. /health checks database connectivity; unknown /api routes return 404 instead of the browser app.
 
+Npgsql also requires No Reset On Close=true when retaining its client-side pool over transaction pooling. Without it, connection reset commands caused repeated requests to time out in the hosted database smoke check. With this setting, 24 concurrent/repeated reads passed. SkillSnap uses one fixed database role/search path and no per-user database session settings. See [Npgsql pooler compatibility](https://www.npgsql.org/doc/compatibility.html).
+
 ## Setup and checks
 
 Local SQLite setup stays in the README. With a disposable PostgreSQL server available, set SKILLSNAP_TEST_POSTGRES privately to its admin connection and run:
