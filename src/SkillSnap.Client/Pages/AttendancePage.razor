@@ -43,8 +43,12 @@ else if (roster is not null)
                 <div class="attendance-actions">
                     <button disabled="@(saving || entry.Status == AttendanceStatus.Attended)" aria-label="@($"Mark registration {entry.RegistrationId} attended")" @onclick="() => SetAsync(entry, AttendanceStatus.Attended)">Mark attended</button>
                     <button class="refresh" disabled="@(saving || entry.Status == AttendanceStatus.Absent)" aria-label="@($"Mark registration {entry.RegistrationId} absent")" @onclick="() => SetAsync(entry, AttendanceStatus.Absent)">Mark absent</button>
-                    <button class="refresh" disabled="@(saving || entry.Status == AttendanceStatus.NotRecorded)" aria-label="@($"Clear attendance for registration {entry.RegistrationId}")" @onclick="() => SetAsync(entry, AttendanceStatus.NotRecorded)">Clear attendance</button>
+                    <button class="refresh" disabled="@(saving || entry.Status == AttendanceStatus.NotRecorded)" aria-label="@(entry.Status == AttendanceStatus.NotRecorded ? $"Attendance already clear for registration {entry.RegistrationId}" : $"Clear attendance for registration {entry.RegistrationId}")" @onclick="() => SetAsync(entry, AttendanceStatus.NotRecorded)">@(entry.Status == AttendanceStatus.NotRecorded ? "Already clear" : "Clear attendance")</button>
                 </div>
+                @if (entry.Status == AttendanceStatus.NotRecorded)
+                {
+                    <p class="demo-note">No attendance mark to clear. Mark attended or absent first; clearing returns it to Not recorded.</p>
+                }
             }
         </article>
     }
