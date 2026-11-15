@@ -6,9 +6,9 @@ using SkillSnap.Client.Services;
 var builder = WebAssemblyHostBuilder.CreateDefault(args);
 builder.RootComponents.Add<App>("#app");
 builder.RootComponents.Add<HeadOutlet>("head::after");
-var apiBaseUrl = builder.Configuration["ApiBaseUrl"]
-    ?? throw new InvalidOperationException("ApiBaseUrl is required in wwwroot/appsettings.json.");
-builder.Services.AddScoped(_ => new HttpClient { BaseAddress = new Uri(apiBaseUrl), Timeout = TimeSpan.FromSeconds(15) });
+// An empty/relative address uses this deployment's origin, including preview URLs.
+var apiBaseUrl = new Uri(new Uri(builder.HostEnvironment.BaseAddress), builder.Configuration["ApiBaseUrl"] ?? "");
+builder.Services.AddScoped(_ => new HttpClient { BaseAddress = apiBaseUrl, Timeout = TimeSpan.FromSeconds(15) });
 builder.Services.AddScoped<LearningSessionService>();
 builder.Services.AddScoped<ApiClient>();
 builder.Services.AddScoped<AccountSession>();
