@@ -1,12 +1,30 @@
 # SkillSnap
 
-A learning-session planner built with C#, Blazor WebAssembly, ASP.NET Core Web API, and SQLite through Entity Framework Core.
+A full-stack C# application for discovering learning sessions, booking seats, and managing attendance.
 
-**Milestone 5: attendance.** Organizers can create/edit sessions, view registered attendees, and record or correct attendance. Attendees see their own attendance in My sessions. Booking, account, capacity, and editing protections remain in place. Public browsing does not expose attendee details. Sample dates and instructors are fictional. All times are UTC.
+[![Build and test](https://github.com/robcorbisiero/SkillSnap/actions/workflows/ci.yml/badge.svg)](https://github.com/robcorbisiero/SkillSnap/actions/workflows/ci.yml)
 
-ASP.NET Core Identity stores accounts and password hashes in SQLite. Login uses an HttpOnly cookie, not browser-stored bearer tokens. Existing milestone 2 browser registrations remain in the database until their original browser key is explicitly imported into an account. See [accounts and the migration flow](docs/accounts.md) and the [development plan](docs/roadmap.md).
+**Stack:** .NET 10 · Blazor WebAssembly · ASP.NET Core Web API · EF Core · SQLite locally · PostgreSQL on Supabase · Vercel containers.
 
-This is a new, independent portfolio project. **This repository was not the code submitted to Coursera.** It does not establish that the application described in earlier coursework was implemented at that time.
+**Review the project:** [Engineering case study](docs/case-study.md) · [Integration tests](tests/SkillSnap.Api.Tests) · [CI workflow](.github/workflows/ci.yml) · [Hosted demo](https://skillsnap-umber.vercel.app).
+
+The hosted demo requires the owner's Vercel team access. Reviewers can inspect the screenshot and source or run the application locally without a paid service or API key. Email verification and password recovery are unfinished; this is a portfolio demo with fictional sessions and instructors.
+
+<img src="docs/images/organizer.png" alt="SkillSnap organizer page with a session editor, sample programme, capacity counts, and attendance links" width="900">
+
+## What this demonstrates
+
+| Engineering concern | Implementation and evidence |
+| --- | --- |
+| Authentication and authorization | ASP.NET Core Identity, HttpOnly cookies, CSRF protection, attendee isolation, and database-backed Organizer role checks. [Account design](docs/accounts.md) |
+| Consistent bookings | Idempotent registration/cancellation, capacity checks, PostgreSQL row locks, and revision checks for conflicting edits. [Endpoints](src/SkillSnap.Api/Endpoints) |
+| Schema evolution | Separate EF migrations for SQLite and PostgreSQL, including account and attendance changes. [Data layer](src/SkillSnap.Api/Data) |
+| Repeatable verification | 64 integration tests executed against each database provider, plus a production-container smoke check in CI. [Verification notes](docs/verification.md) |
+| Deployment troubleshooting | Shared cookie keys, same-origin API calls, verified database TLS, transaction pooling, and cold-start migration handling. [Hosting case](docs/case-study.md#deployment-problem-and-resolution) |
+
+Learners can register, filter My sessions, view their own attendance, and cancel eligible bookings. Organizers can create/edit sessions and record, correct, or clear attendance. Public browsing does not expose attendee identities. All programme times are UTC.
+
+For a five-minute review, read the case study, inspect the booking and authorization code, then run the tests using the commands below.
 
 ## Prerequisites
 
@@ -199,3 +217,7 @@ dotnet publish src/SkillSnap.Client -c Release -o artifacts/client
 GitHub Actions builds the solution, runs the 64 integration tests against SQLite and PostgreSQL, publishes the WebAssembly client, builds the production container, and checks its health, browser routes, API fallback, and relative API configuration. Browser interactions are checked manually; automated UI tests are a future addition.
 
 Hosting uses Vercel's container runtime and a separate Supabase PostgreSQL database; SQLite remains the local default. See [deployment setup and status](docs/vercel-plan.md). Email verification and password recovery need a real mail setup before public account use. See [the roadmap](docs/roadmap.md).
+
+## Project provenance
+
+This is a new, independent portfolio project developed iteratively with AI assistance and verified through automated tests and browser walkthroughs. **This repository was not the code submitted to Coursera.** It does not establish that the application described in earlier coursework was implemented at that time. No production-user, commercial-deployment, or sole-authorship claim is made.

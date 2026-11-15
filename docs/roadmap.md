@@ -43,9 +43,9 @@ Acceptance: register -> seat count falls -> My sessions includes it -> refresh p
 - Existing bookings and roles preserved through migration; unclaimed browser bookings must be imported before marking.
 - Permission, privacy, validation, migration, persistence, and race-condition tests.
 
-## Next — Deployment readiness
+## Hosted demo — Complete
 
-Choose the host and domain, configure persistent database/key storage and HTTPS, decide the mail provider for verification/recovery, and test the deployed flow before public use. No hosting purchases, paid subscriptions, domain registrations, or external mail setup are implied by completing the local milestones.
+The protected Vercel container demo uses Supabase PostgreSQL, shared cookie keys, verified TLS, and transaction pooling. Learner, Organizer, and attendance walkthroughs passed. See [hosting notes](vercel-plan.md) and [engineering case study](case-study.md).
 
 ## Later milestones
-Pagination, deployment over HTTPS, account mail verification/recovery, and operational monitoring. Each milestone gets its own reviewable change, tests, and updated documentation. This remains a new independent portfolio project, not the code submitted to Coursera.
+Pagination, account mail verification/recovery, shared account abuse controls, browser CI tests, and operational monitoring. Each milestone gets its own reviewable change, tests, and updated documentation. This remains a new independent portfolio project, not the code submitted to Coursera.
