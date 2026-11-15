@@ -140,13 +140,14 @@ internal sealed class SessionFactory(string? databasePath = null) : WebApplicati
     {
         base.Dispose(disposing);
         if (disposing && databasePath is null) File.Delete(path);
-        if (disposing && postgresDatabase is not null)
+        if (disposing && postgresDatabase is { } database)
         {
+            postgresDatabase = null; // WebApplicationFactory can be disposed more than once.
             using var pool = new Npgsql.NpgsqlConnection(postgresConnection);
             Npgsql.NpgsqlConnection.ClearPool(pool);
             using var admin = new Npgsql.NpgsqlConnection(Environment.GetEnvironmentVariable("SKILLSNAP_TEST_POSTGRES"));
             admin.Open();
-            using var drop = new Npgsql.NpgsqlCommand($"DROP DATABASE \"{postgresDatabase}\" WITH (FORCE)", admin);
+            using var drop = new Npgsql.NpgsqlCommand($"DROP DATABASE IF EXISTS \"{database}\" WITH (FORCE)", admin);
             drop.ExecuteNonQuery();
         }
     }
