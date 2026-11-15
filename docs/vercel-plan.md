@@ -1,6 +1,6 @@
 # Vercel and Supabase hosting
 
-Status (November 15, 2026): deployed at https://skillsnap-umber.vercel.app with Vercel Authentication enabled for All Deployments. The hosted session listing reads the three starter sessions from Supabase. Hosted account and organizer walkthroughs are in progress. The production container and all 64 tests against both SQLite and PostgreSQL passed GitHub Actions.
+Status (November 15, 2026): deployed at https://skillsnap-umber.vercel.app with Vercel Authentication enabled for All Deployments. Verified hosted signup, authenticated session listing, registration, My sessions, booking persistence after reload, and cancellation. Sign-in survived replacement by the corrected deployment. The test booking was removed; the hosted account remains. Organizer access is awaiting explicit hosted-account approval. The production container and all 64 tests against both SQLite and PostgreSQL passed GitHub Actions for the runtime fix.
 
 ## Architecture
 
@@ -17,7 +17,7 @@ Registration and organizer capacity writes lock the same session row in PostgreS
 - Fresh hosted data: three starter sessions, no local accounts or private key files uploaded.
 - corbitpros-dev was paused to free the active free-project slot, preserving its data. It was not deleted. corbitpros was not modified.
 - Supabase quoted a $0 monthly project base cost at creation. Usage and future plan changes follow the provider's limits.
-- Vercel project: skillsnap in Robert Corbisiero's projects. Created through the website after the connector denied creation. Verified connected deployment: dpl_97xrwnt7PEkTrBiW3bBQdYN7ZCJG, source commit 93d172c.
+- Vercel project: skillsnap in Robert Corbisiero's projects. Created through the website after the connector denied creation. Verified corrected deployment: dpl_9v9BPEEv3DcxXnTXbN8ghHnwFhVm, source commit 2a9627f. GitHub main is connected for automatic deployments.
 
 ## Deployment configuration
 
@@ -58,7 +58,7 @@ Review and apply hosted database changes once as a controlled deployment step th
 
 ## Readiness limits
 
-Vercel Container Runtime is Beta on all plans. A protected hosted walkthrough must verify signup, login, booking/cancellation, organizer access, attendance, and state after container replacement before calling hosting complete. Hosted organizer access needs explicit approval for the intended hosted account; the earlier local grant does not grant hosted access. Email verification and password recovery remain unfinished, so keep the initial deployment protected.
+Vercel Container Runtime is Beta on all plans. The hosted learner walkthrough is verified; hosted organizer and attendance checks remain. Hosted organizer access needs explicit approval for the intended hosted account; the earlier local grant does not grant hosted access. Email verification and password recovery remain unfinished, so keep the deployment protected. Npgsql transaction-pooling options are necessary even for a small demo because Vercel can start multiple containers for concurrent requests.
 
 Sources checked November 15, 2026:
 
