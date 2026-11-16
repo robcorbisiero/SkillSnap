@@ -221,3 +221,7 @@ Hosting uses Vercel's container runtime and a separate Supabase PostgreSQL datab
 ## Project provenance
 
 This is a new, independent portfolio project developed iteratively with AI assistance and verified through automated tests and browser walkthroughs. **This repository was not the code submitted to Coursera.** It does not establish that the application described in earlier coursework was implemented at that time. No production-user, commercial-deployment, or sole-authorship claim is made.
+
+## Angular learning companion
+
+An optional [Angular/TypeScript session explorer](examples/angular-learning/README.md) reads the same C# API. It demonstrates reactive filtering, loading/error/empty states, and three component tests. It is a small AI-assisted learning exercise, separate from the full Blazor client and hosted deployment. Follow its personal debugging walkthrough before presenting Angular as a skill.

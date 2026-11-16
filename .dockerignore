@@ -11,3 +11,5 @@ artifacts
 **/*.db-shm
 **/*.pfx
 **/*.pem
+
+examples/

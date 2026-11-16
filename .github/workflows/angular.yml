@@ -1,0 +1,22 @@
+name: Angular learning companion
+on:
+  push:
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  angular:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: examples/angular-learning
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '26'
+          cache: npm
+          cache-dependency-path: examples/angular-learning/package-lock.json
+      - run: npm ci
+      - run: npm test -- --no-watch
+      - run: npm run build

@@ -1,0 +1,80 @@
+<header>
+  <a href="#main" class="brand">SkillSnap<span>LEARNING EXPLORER</span></a
+  ><span class="tag">Angular edition</span>
+</header>
+<main id="main">
+  <section class="intro">
+    <p class="eyebrow">MAKE ROOM TO LEARN</p>
+    <h1>Your next skill<br />starts with a session.</h1>
+    <p>Explore the programme, meet the instructors, and find something worth your time.</p>
+    <p class="note">
+      This learning interface browses the existing C# API. Booking and account management are
+      available in the Blazor application.
+    </p>
+  </section>
+  <section aria-labelledby="programme-title" [attr.aria-busy]="loading()">
+    <div class="section-top">
+      <div>
+        <p class="eyebrow">THE PROGRAMME</p>
+        <h2 id="programme-title">Learning sessions</h2>
+      </div>
+      <button type="button" (click)="reload()" [disabled]="loading()">
+        {{ loading() ? 'Loading…' : 'Refresh sessions' }}
+      </button>
+    </div>
+    <div class="filters">
+      <label
+        >Search sessions<input
+          type="search"
+          placeholder="Title, instructor, or description"
+          [value]="query()"
+          (input)="query.set($any($event.target).value)" /></label
+      ><label
+        >Topic<select [value]="topic()" (change)="topic.set($any($event.target).value)">
+          <option value="">All topics</option>
+          @for (item of topics(); track item) {
+            <option [value]="item">{{ item }}</option>
+          }
+        </select></label
+      >
+    </div>
+    @if (error()) {
+      <div class="error" role="alert">
+        <h3>Connection unavailable</h3>
+        <p>{{ error() }}</p>
+        <button type="button" (click)="reload()">Retry</button>
+      </div>
+    } @else if (loading()) {
+      <p role="status">Loading sessions from the API…</p>
+    } @else {
+      <p class="count" role="status">{{ filtered().length }} of {{ sessions().length }} sessions</p>
+      <div class="grid">
+        @for (session of filtered(); track session.id) {
+          <article>
+            <div class="card-top">
+              <span class="topic">{{ session.topic }}</span
+              ><span>{{ session.durationMinutes }} min</span>
+            </div>
+            <h3>{{ session.title }}</h3>
+            <p>{{ session.description }}</p>
+            <div class="details">
+              <strong>{{ session.instructor }}</strong
+              ><time [attr.datetime]="session.startsAtUtc"
+                >{{ session.startsAtUtc | date: 'MMM d, y · HH:mm' : 'UTC' }} UTC</time
+              >
+            </div>
+            <div class="seats">
+              {{ session.seatsRemaining }} of {{ session.capacity }} seats remaining
+            </div>
+          </article>
+        } @empty {
+          <div class="empty">
+            <h3>No sessions found</h3>
+            <p>Try another search or topic. If the programme is empty, refresh later.</p>
+          </div>
+        }
+      </div>
+    }
+  </section>
+</main>
+<footer>SkillSnap · Independent learning project · Fictional programme · All times UTC</footer>
